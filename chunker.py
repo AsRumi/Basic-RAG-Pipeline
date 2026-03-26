@@ -1,18 +1,14 @@
 def chunk_text(text, chunk_size, overlap):
     chunks = []
     i = 0
-    while i + chunk_size <= len(text):
-        if i == 0:
-            chunks.append(text[i: i + chunk_size])
-            i += chunk_size
-        else:
-            chunks.append(text[i - overlap: i + chunk_size - overlap])
-            i += chunk_size
-            
-    if i < len(text):
-        if i == 0:
-            chunks.append(text)
-        else:
-            chunks.append(text[i - overlap: ])
+    while i < len(text):
+        chunks.append(text[i: i + chunk_size])
+        i += chunk_size - overlap
             
     return chunks
+
+text = "abcdefghijklmnopqrstuvwxyz"
+chunk_size = 6
+overlap = 2
+
+print(chunk_text(text, chunk_size, overlap))
