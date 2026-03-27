@@ -17,6 +17,6 @@ def cosine_similarity(a, b):
 
 sim_01 = cosine_similarity(embeddings[0], embeddings[1])
 sim_02 = cosine_similarity(embeddings[0], embeddings[2])
-sim_03 = cosine_similarity(embeddings[0], embeddings[4])
+sim_03 = cosine_similarity(embeddings[0], embeddings[3])
 
 print(f"Cos of first two: {sim_01}\nCos of first and third: {sim_02}\nCos of same sentences: {sim_03}")
