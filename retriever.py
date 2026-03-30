@@ -8,6 +8,15 @@ from sentence_transformers import CrossEncoder
 
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
+def retrieve_and_rerank(query, k):
+    retrieval_results = retrieve(query, 10)
+    chunks = retrieval_results["documents"][0] # "documents" is a list of lists, [0] gives you the flat list of strings
+    chunk_scores = reranker.predict([[query, chunk] for chunk in chunks])
+    scored_chunks = zip(chunk_scores, chunks)
+    sorted_chunks = sorted(scored_chunks, key = lambda x: x[0], reverse = True)
+    results = [chunk for _, chunk in sorted_chunks[:k]]
+    return results
+
 def retrieve(query, k: int):
     query_embedding = model.encode([query]).tolist()
     similar_embeddings = documents.query(query_embeddings = query_embedding,
@@ -15,5 +24,8 @@ def retrieve(query, k: int):
     return similar_embeddings
 
 query = "What building materials did early humans use?"
-results = retrieve(query, 3)
-print(results["documents"])
+retrieveResults = retrieve(query, 3)
+rerankResults = retrieve_and_rerank(query, 3)
+print(f"Retrieval only results: \n\n{retrieveResults["documents"]}")
+print("-" * 25)
+print(f"Retrieval and Reranking results: \n\n{rerankResults}")
