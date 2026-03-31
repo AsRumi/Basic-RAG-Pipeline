@@ -22,10 +22,3 @@ def retrieve(query, k: int):
     similar_embeddings = documents.query(query_embeddings = query_embedding,
                     n_results = k)
     return similar_embeddings
-
-query = "What building materials did early humans use?"
-retrieveResults = retrieve(query, 3)
-rerankResults = retrieve_and_rerank(query, 3)
-print(f"Retrieval only results: \n\n{retrieveResults["documents"]}")
-print("-" * 25)
-print(f"Retrieval and Reranking results: \n\n{rerankResults}")
