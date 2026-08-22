@@ -136,7 +136,7 @@ rag-project/
 3. Add your Gemini API key to a `.env` file: `GEMINI_API_KEY=your_key_here`
 4. Run ingestion to chunk, embed, and index the document:
    ```
-   python ingest.py
+   python ingest.py --name documentName.txt
    ```
 5. Start the interactive query loop:
    ```

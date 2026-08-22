@@ -18,7 +18,7 @@ def build_prompt(query, chunks):
 def ask(query):
     chunks = retrieve_and_rerank(query, 3)
     prompt = build_prompt(query, chunks)
-    response = client.models.generate_content(model = "gemini-2.5-flash-lite", contents = prompt)
+    response = client.models.generate_content(model = "gemini-3.5-flash-lite", contents = prompt)
     return response.text
 
 if __name__ == "__main__":
