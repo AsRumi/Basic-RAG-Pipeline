@@ -131,6 +131,9 @@ rag-project/
 
 ## Running the Pipeline
 
+Basic RAG Pipeline cached at v1-stable.
+`git checkout v1-stable` to migrate to Basic RAG Pipeline.
+
 1. Clone the repo and activate your virtual environment.
 2. Install dependencies: `pip install -r requirements.txt`
 3. Add your Gemini API key to a `.env` file: `GEMINI_API_KEY=your_key_here`
