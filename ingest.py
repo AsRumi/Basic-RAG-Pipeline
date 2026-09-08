@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timezone
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from store import documents, model
+from supersede import nominate, log, LOG_PATH
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
@@ -35,6 +36,8 @@ if __name__ == "__main__":
     parser.add_argument("--name", default = "document.txt")
     parser.add_argument("--as-of", dest = "as_of",
                         help = "Date this content is from (YYYY-MM-DD). Defaults to now.")
+    parser.add_argument("--dry-run", dest = "dry_run", action = "store_true",
+                        help = "Nominate and log candidates without storing anything.")
     args, _ = parser.parse_known_args()
 
     source = os.path.basename(args.name) # ids must not depend on how the path was typed
@@ -53,7 +56,11 @@ if __name__ == "__main__":
     stored = set(documents.get(ids = list(chunks))["ids"])
     new_chunks = {id: text for id, text in chunks.items() if id not in stored}
 
-    if new_chunks:
+    # nominated before the upsert, so a batch can never be compared against itself
+    candidates = nominate(new_chunks, source, ingested_at)
+    log(candidates)
+
+    if new_chunks and not args.dry_run:
         texts = list(new_chunks.values())
         documents.upsert(ids = list(new_chunks),
                          documents = texts,
@@ -66,6 +73,10 @@ if __name__ == "__main__":
                                        "content_hash": content_hash(text)} for text in texts])
 
     dated = datetime.fromtimestamp(ingested_at, timezone.utc)
+    nominated = [pair for pair in candidates if pair["nominated"]]
 
-    print(f"Ingestion Complete! {len(new_chunks)} new chunks from {source}, dated {dated:%Y-%m-%d}")
+    print(f"{'Dry run!' if args.dry_run else 'Ingestion Complete!'} "
+          f"{len(new_chunks)} new chunks from {source}, dated {dated:%Y-%m-%d}")
     print(f"{len(stored)} already stored, collection now holds {documents.count()} chunks")
+    print(f"{len(nominated)} of {len(candidates)} candidate pairs above threshold, "
+          f"logged to {LOG_PATH}")

@@ -2,7 +2,7 @@
 
 **Project:** Basic-RAG-Pipeline
 **Date of this record:** 2026-09-07 (revised same day — all blocking decisions now resolved)
-**Status:** **Phase 1 implemented and verified** (see [§14](#14-phase-1-implementation-record)). All blocking decisions answered ([§12](#12-decisions-resolved-2026-09-07)). Next up: Phase 2, candidate detection + dry-run log.
+**Status:** **Phases 1 and 2 implemented and verified** ([§14](#14-phase-1-implementation-record), [§16](#16-phase-2-implementation-record-2026-09-08)). All blocking decisions answered ([§12](#12-decisions-resolved-2026-09-07)). Next up: Phase 3, the LLM adjudicator — still logging only. See §18 for the measurement that makes it mandatory. Code style is recorded in [§15](#15-code-style-in-this-repository).
 
 This file exists so that a *new* Claude session (or a human) can pick up this exact problem with zero context loss. It captures the current repo state, the idea being pursued, the full design discussion including rejected approaches and the reasoning behind them, and the agreed implementation plan.
 
@@ -10,6 +10,7 @@ This file exists so that a *new* Claude session (or a human) can pick up this ex
 
 ## 1. How to work on this (process conventions)
 
+- **Write to the user in plain prose. See §20.** This one matters as much as any technical convention here.
 - **The user works discussion-first.** They explicitly asked for design conversation with *no code changes* until they say so. Do not start editing files because a design seems settled. Propose, then wait.
 - **Do not treat this as a greenfield rewrite.** It is a working pipeline. Changes should be incremental, and each phase should leave the system in a working state.
 - **Nothing is ever hard-deleted from the vector store.** This is the central safety principle of the whole feature (see §8).
@@ -289,7 +290,7 @@ Mitigations:
 | Phase | Content | Risk |
 |---|---|---|
 | **1** | Metadata + content-addressed ids + cosine space + `status` filter. No LLM, no automation. Everything is `active`; behaviour is unchanged. **Fixes the orphan bug on its own.** | Safe — **DONE 2026-09-07** |
-| **2** | Candidate detection + dry-run log. Read-only. Lets the threshold be tuned against real output. | Safe |
+| **2** | Candidate detection + dry-run log. Read-only. Lets the threshold be tuned against real output. | Safe — **DONE 2026-09-08** |
 | **3** | LLM adjudicator, still logging only. | Safe |
 | **4** | Auto-apply. | **Only mutating phase** |
 
@@ -458,3 +459,229 @@ Each one records something the reader cannot deduce from the code. That is the b
 Stripping prose out of the source does not mean losing it. Design rationale goes in this file; the narrative walkthrough goes in the learning guide planned for the end of v2. The source stays readable at a glance, and the explanation stays somewhere it can be read in order.
 
 **When adding code in later phases, write it at this density from the start.**
+
+---
+
+## 16. Phase 2 implementation record (2026-09-08)
+
+Candidate detection and the dry-run log. **Read-only: no LLM, no mutation, no `status` ever changes.**
+
+### 16.1 What was built
+
+**`supersede.py`** (new)
+- `nominate(chunks, source, ingested_at)` — one batched `documents.query` over `status="active"` records, `CANDIDATES_PER_CHUNK = 5`. Returns pair records; decides nothing.
+- `log(pairs)` — appends to `supersession_log.jsonl`, one JSON object per line.
+- `read_log()` / `preview()` — support for the report.
+- Running `python supersede.py` prints the logged pairs sorted by similarity, with `--threshold` to re-evaluate at a different cutoff and `--all` to include pairs below it. It closes with a count at each of 0.9 → 0.5.
+
+**`ingest.py`**
+- `--dry-run`: nominates and logs, stores nothing.
+- Nomination happens **before** the upsert.
+
+**`.gitignore`** — `supersession_log.jsonl` added. See §16.5.
+
+### 16.2 Invariant #3 is satisfied structurally, not by filtering
+
+"Never compare two chunks from the same ingest batch" could have been enforced with an exclusion filter. It isn't. `nominate()` runs **before** `documents.upsert`, so at the moment of the query the batch is not in the store and cannot possibly be returned.
+
+There is no threshold to misconfigure and no filter to forget. **If nomination is ever moved after the write, the invariant breaks silently** — chunks would be adjudicated against their own neighbours, which overlap by 150 characters by construction (§7.2b).
+
+Only chunks that are genuinely new are nominated; ids already stored are skipped before nomination is reached.
+
+### 16.3 Similarity is `1 - distance`
+
+Chroma returns cosine **distance**. The pair records store similarity, so higher always means more alike. This is only correct because the collection is cosine space — on the l2 default the arithmetic would be meaningless, which is what the §14.2 guard protects.
+
+### 16.4 First real numbers
+
+Measured with a throwaway fixture: the manual's `SPECIFICATIONS` section with battery life edited from 35/20 hours to 45/28, plus a reworded troubleshooting line and a new firmware section. Dry-run only; the fixture and its log were deleted afterwards.
+
+| Pair | Similarity |
+|---|---|
+| `SPECIFICATIONS` vs `SPECIFICATIONS` (battery numbers changed) | **0.956** |
+| `SPECIFICATIONS` vs `PACKAGE CONTENTS` | 0.494 |
+| everything else unrelated | 0.35 – 0.44 |
+
+**The separation is much wider than expected.** A genuine near-duplicate scored 0.956 while the best unrelated pair reached 0.494 — an empty band of half the scale between them. The default `SIMILARITY_THRESHOLD = 0.75` sits in the middle of that gap.
+
+Treat this as **one data point, not a tuned threshold.** It is a single edited section against a 10-chunk store, and the easiest possible case: a numeric change inside otherwise identical text. Retune against the real clone.
+
+~~**Watch for chunk-boundary drift.**~~ **Retracted — measured and disproved. See §17.** The fixture's troubleshooting chunk scored 0.427 because the fixture was a short excerpt whose chunk held genuinely different content, not because boundaries had drifted.
+
+### 16.5 Open: should the log be committed?
+
+Currently gitignored — it is bulk generated text and, at Phase 2, pure diagnostics.
+
+**This must be revisited before Phase 4.** §7.5 designates the log as the rollback path: replaying it backwards is what restores `status` after a bad supersession. A rollback path that is not under version control is one `git clean` away from being gone. Options are to commit it, or to accept that rollback is local-only and depends on the file surviving.
+
+### 16.6 Not yet built
+
+No adjudication. `verdict` and `rationale` are written as `null` on every pair so the log schema stays stable when Phase 3 fills them in. Nothing reads `older` yet either, though it is computed and stored from `ingested_at` per invariant #4.
+
+---
+
+## 17. Chunk-boundary drift: first dismissed, then found to be real (2026-09-08)
+
+> **This section's original conclusion was wrong and is corrected in §19.** The experiments below were run on synthetic single-edit documents, which turned out to be far gentler than a real revision. Read §19 before acting on anything here.
+
+§16.4 raised the worry that editing a document shifts every chunk boundary downstream, so corresponding sections in v1 and v2 would fail to align and real supersession candidates would score too low to be nominated. **That worry was wrong.** It was raised on one misread data point and is retracted.
+
+### 17.1 What was measured
+
+Four edit types applied to `Aurora_Pro_1000_UserManual.txt`, each chunked at 800/150 and compared by best-match cosine similarity of every v2 chunk against every v1 chunk.
+
+| Edit | v1 → v2 chunks | byte-identical | min | median | below 0.75 |
+|---|---|---|---|---|---|
+| Mid-sentence insertion (not on a paragraph break) | 10 → 10 | 8 | 0.78 | 1.00 | **0** |
+| Long block inserted early, forcing repacking | 10 → 12 | 10 | 0.04\* | 1.00 | 2\* |
+| Early section deleted entirely | 10 → 9 | 9 | 1.00 | 1.00 | **0** |
+| Every section renumbered | 10 → 10 | 0 | 0.99 | 1.00 | **0** |
+
+\* The two low scores are the *inserted* text itself, which has no counterpart in v1 and is correctly unmatched. That is nomination working, not drift.
+
+### 17.2 Why the worry was misplaced
+
+`RecursiveCharacterTextSplitter` is **not** a fixed-window splitter. It tries `"\n\n"` first, then `"\n"`, then `" "`, and only falls back to raw character offsets when a single unbroken run exceeds `chunk_size`. Boundaries therefore land on paragraph breaks, which are stable features of the document — insert or delete a whole paragraph and the surrounding chunks are untouched. Nine of ten chunks came back byte-identical after a section was inserted.
+
+Do not confuse this with `chunker.py`'s hand-written `chunk_text`, which *is* a naive fixed-window splitter. That function is scratch code and is not on the live path; the worry would have been correct for it.
+
+### 17.3 Even genuine drift does not break nomination
+
+Forced worst case: a single unbroken wall of prose with no paragraph breaks anywhere, ~90 characters inserted near the start, so every boundary shifts and **zero** chunks stay byte-identical.
+
+```
+best match per v2 chunk: 0.96 0.92 0.83 0.96 0.99 0.99 0.99 0.98 0.81
+min 0.81 | median 0.96 | below 0.75: 0 of 9
+```
+
+Chunk size is what absorbs it. Shift an 800-character window by 90 characters and it still shares ~710 characters with its counterpart; the embedding is dominated by the bulk, not the edges. Adding paragraph breaks back to the same text restored 8 of 10 chunks to byte-identical.
+
+Swept across chunk sizes 150–1600 on that same worst case, every configuration held a median near 0.96. Only `chunk_size=300` produced even one pair below 0.75. **No clean monotonic relationship** — where boundaries fall relative to the edit matters more than size — so this is weak supporting evidence for larger chunks, not proof.
+
+### 17.4 A structure-aware splitter is not needed
+
+Splitting on section-header regexes was tested against the character-based default. On the section-insertion case it moved the worst chunk from 0.91 to 0.96. Both are far above any usable threshold. **Not worth the complexity**, and it would only ever help documents with regular headers.
+
+### 17.5 Where the real fragility is
+
+Boundary drift is not a live risk. These are, and all are already on record:
+
+- **Embeddings cannot tell contradiction from refinement** (§4.2). The load-bearing problem, and the entire reason Phase 3 exists.
+- **Chunk-level collateral damage** (§4.7) — retiring a chunk kills every fact inside it, not just the stale one.
+- **Same-source orphans** (§14.5) — content deleted in v2 lingers as `active`.
+
+Nomination recall is a tunable, not a fragility: if pairs are being missed, raise `CANDIDATES_PER_CHUNK` or lower `SIMILARITY_THRESHOLD`. Both are cheap because nomination is pure vector search, and the LLM is the thing that actually decides. Widening nomination costs adjudication calls; it cannot cause a bad supersession on its own.
+
+---
+
+## 18. First real clone run — and the number that justifies the whole design (2026-09-08)
+
+### 18.1 The first attempt reported a mistake in the inputs, not a bug
+
+The first dry run of `Aurora_Pro_1000_UserManual-v2.txt` returned **ten pairs at exactly 1.000**. The cause: the clone was made first, then *the original was edited*. So `-v2.txt` held the unedited text and was byte-identical to what the store had ingested on 2025-01-15, while the edits sat in the file the store already knew.
+
+The tool was correct. It said "this is a perfect copy of what I already have", which it was. Filenames were swapped so that `Aurora_Pro_1000_UserManual.txt` matches the store and `-v2.txt` carries the edits.
+
+**Worth remembering:** an all-1.000 report means *nothing new was fed in*, not that supersession failed.
+
+### 18.2 The result: a contradiction is indistinguishable from an exact duplicate
+
+After the swap, v2's single edit is to the Bluetooth pairing steps:
+
+```
+-2. Press and hold the Power Button for 5 seconds until the Status LED flashes
+-   alternating Blue and Red.
++2. Press and hold the Power Button for 10 seconds until the Status LED flashes
++   alternating Green and Purple.
+-5. Once connected, the Status LED will turn solid Blue.
++5. Once connected, the Status LED will turn solid Green.
+```
+
+A flat operational contradiction — different hold time, different LED colours. Follow the old instructions and the device will not pair.
+
+| Pair | Similarity |
+|---|---|
+| Nine byte-identical chunks | **1.0000** |
+| The contradicting chunk | **0.9966** |
+
+**The entire distance between "identical" and "actively wrong" is 0.0034.**
+
+### 18.3 What this settles
+
+§4.2 argued from first principles that embeddings cannot detect contradiction. This measures it on real data from the target corpus, and the margin is far tighter than the argument suggested.
+
+- **No threshold can separate `DUPLICATE` from `CONTRADICTS`.** Any cutoff catching the contradiction at 0.9966 also catches every unchanged chunk at 1.0000. Any cutoff excluding duplicates excludes the contradiction. The two classes are not separable in this dimension **at all**.
+- **Invariant #2 is not a design preference, it is a hard requirement.** Similarity nominates; the LLM decides. A distance-threshold implementation of this feature would be worse than doing nothing, because it would look like it was working.
+- ~~**The 0.75 default threshold is fine.**~~ **Wrong — see §19.** This held only because the file contained a single edit. On the full five-edit clone, real supersession pairs landed as low as 0.4454.
+
+### 18.4 Cheap win for Phase 3: settle exact duplicates without the LLM
+
+Nine of ten nominated pairs were **byte-identical**. §6 already carries `content_hash` for exactly this. An identical hash *is* `DUPLICATE` by definition — no judgment required, no API call.
+
+On this ingest that is **10 adjudication calls reduced to 1**. It also removes the largest and most boring category before the adjudicator ever sees it, so the prompt only ever faces pairs that genuinely differ. Fold this into Phase 3 before any prompt work.
+
+### 18.5 The clone needs more edits before Phase 3 is properly tested
+
+v2 currently contains **one** change, a clean contradiction. That exercises one verdict. Before the adjudicator can be trusted, the clone still needs the cases from §11 — above all a **refinement engineered to look like a contradiction**, since an adjudicator that returns `CONTRADICTS` for everything would score perfectly on the current file while being completely broken.
+
+---
+
+## 19. Nomination by threshold does not work (2026-09-08)
+
+This section corrects §17 and part of §18. Both were written from experiments that were too gentle, and the full five-edit clone disproved them.
+
+### What happened
+
+The clone was finished with five edits: a contradiction in the pairing steps, a one-word negation of the charging note, a cleaning rule turned into a conditional permission, the interference warning narrowed to 2.4GHz, and a brand new firmware section. Running nomination against it, **four of the twelve incoming chunks scored below the 0.75 threshold**, and two of those four carried the edits that matter most.
+
+The cleaning-rule change scored 0.6316 against its correct counterpart. The interference refinement scored 0.6298 against the wrong chunk entirely, with its correct counterpart sitting at rank two on 0.4454 — lower than plenty of pairs elsewhere in the run that were genuinely unrelated.
+
+At a 0.75 threshold, neither would ever have reached the adjudicator. The two cases specifically designed to catch a broken adjudicator would have been silently dropped before it ever ran.
+
+### Why it happens
+
+§17 blamed boundary positions and concluded the recursive splitter was safe because it prefers paragraph breaks. That was the wrong mechanism.
+
+The real cause is that **a chunk holding two unrelated topics gets an averaged embedding, and matches on whichever topic occupies more of it.** In the clone, the added text pushed the tail of the troubleshooting section into the same chunk as the whole warranty section. That chunk is mostly warranty text, so it matched the stored warranty chunk at 0.6298 while its actual counterpart — the troubleshooting chunk holding the old interference line — came second at 0.4454.
+
+The same blending affects the stored side. The v1 troubleshooting chunk covers three separate problems, so even querying with the interference paragraph alone only reaches 0.4751 against it. Splitting the query into paragraphs was tested and does not fix this, because both sides are blends.
+
+### What does not fix it
+
+**Section-aware splitting** was tested with regex separators on section headers. It moved four sub-threshold chunks to three. Not a fix.
+
+**Chunk size** is not a reliable lever. Sweeping 200 to 1200 characters, the worst-scoring edited chunk ranged from 0.49 to 0.96 with no monotonic trend — 800 happens to be a bad draw for this document and 1200 a good one. The variance comes from where boundaries land relative to the edits, which is not something that can be tuned in advance.
+
+**Re-chunking the corpus** cannot fix it either, and is worth stating plainly: whatever is already stored was chunked with the settings in force at ingest time. Changing `CHUNK_SIZE` later does not re-chunk it. **Any change to chunking parameters requires re-ingesting every document, or comparisons are made between chunks built to different rules.**
+
+### The fix: rank, with a floor, instead of a threshold
+
+Stop using absolute similarity as a gate. For each incoming chunk, take the **top N candidates by rank regardless of score**, with a low floor of roughly 0.35 purely to skip obvious noise, and let the adjudicator decide. This is what invariant #2 always said — similarity nominates, the LLM adjudicates — and the threshold was quietly doing adjudication's job.
+
+Two things make the extra calls affordable. Exact duplicates are settled by `content_hash` with no LLM call at all, which removed five of twelve chunks on this ingest. And the cost becomes predictable rather than data-dependent: (chunks − duplicates) × N. For this clone that is seven chunks × three candidates, so twenty-one calls.
+
+Over-nominating costs money. Under-nominating loses information silently. Those are not comparable risks.
+
+### The second independent argument for claims
+
+§12.5 deferred claim-level identity and set the trigger as collateral damage showing up in the dry-run log. There is now a **separate** argument for it: chunk-level nomination cannot be made both complete and precise, because a chunk that mixes topics has an embedding that represents none of them well.
+
+This does not reopen the decision. Rank-based nomination is the cheap fix and should be tried first. But if it proves insufficient, claims solve nomination and collateral damage at the same time, and that changes the cost-benefit.
+
+---
+
+## 20. How to talk to the user
+
+This was asked for directly, and it applies to every reply in chat. It does not apply to this file, which is a reference document and is meant to be dense and cross-referenced.
+
+**Write in complete sentences and ordinary prose.** Explain things the way you would to a colleague sitting next to you. The user is learning this material as it gets built, and prose that flows is what makes it stick.
+
+**Do not cite section numbers at them.** Writing "per §4.2" or "this violates invariant #3" forces the reader to reconstruct a document in their head just to parse the sentence. Say the thing instead. Rather than "as established in §4.2", write "embeddings can't tell a contradiction from a rewording." The numbering exists so that a future session can navigate this file, not so that it can be quoted back at a person mid-conversation.
+
+**Use tables only for real data.** A table of measurements, or a genuine side-by-side comparison, is useful. A table used to avoid writing paragraphs is not.
+
+**Do not over-format.** Bold every third phrase and nothing reads as important. Headings on a four-sentence answer are noise.
+
+**Lead with the answer.** If they ask whether something works, the first sentence says whether it works. Reasoning comes after, and detail after that.
+
+**Be straight about mistakes.** Several conclusions in this file were wrong and had to be corrected by real data. Say so plainly in one sentence, correct it, and carry on. No apologising, no dwelling, and no burying the correction at the bottom of a long reply.

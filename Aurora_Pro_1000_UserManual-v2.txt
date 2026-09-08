@@ -1,0 +1,149 @@
+================================================================================
+                    AURORA PRO-1000 WIRELESS AUDIO HEADSET
+                               USER MANUAL
+================================================================================
+
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Package Contents
+2. Product Overview & Controls
+3. Specifications
+4. Getting Started & Charging
+5. Pairing & Connectivity
+   5.1 Bluetooth Pairing
+   5.2 2.4GHz Wireless USB Transceiver
+6. Audio Settings & EQ Modes
+7. Care, Maintenance & Safety
+8. Troubleshooting
+9. Warranty & Support Information
+
+
+1. PACKAGE CONTENTS
+--------------------------------------------------------------------------------
+- 1 x Aurora Pro-1000 Wireless Headset
+- 1 x 2.4GHz Ultra-Low Latency USB-C Dongle
+- 1 x USB-C to USB-A Adapter
+- 1 x USB-C Charging Cable (1.5m)
+- 1 x Detachable Noise-Canceling Boom Microphone
+- 1 x Protective Travel Case
+- 1 x Quick Start Guide
+
+
+2. PRODUCT OVERVIEW & CONTROLS
+--------------------------------------------------------------------------------
+LEFT EARCUP:
+  [ Power Button ]         Press and hold for 3 seconds to turn ON/OFF.
+  [ Status LED ]           Displays battery status and pairing state.
+  [ USB-C Charging Port ]  Connect the included USB-C cable to charge.
+  [ Mic Port ]             3.5mm jack for connecting the detachable boom mic.
+  [ Mic Mute Toggle ]      Press to mute/unmute microphone. Red LED indicates mute.
+
+RIGHT EARCUP:
+  [ Volume Dial ]          Rotate up/down to adjust audio volume.
+  [ EQ Mode Switch ]       Press to cycle through preset equalizer modes.
+  [ Mode Switch Button ]   Toggle between Bluetooth and 2.4GHz Wireless modes.
+
+
+3. SPECIFICATIONS
+--------------------------------------------------------------------------------
+Driver Size:            50mm Neodymium Magnets
+Frequency Response:     20 Hz - 20,000 Hz
+Impedance:              32 Ohms @ 1kHz
+Sensitivity:            98 dB ± 3 dB
+Microphone Type:        Omnidirectional, Noise-Canceling
+Battery Type:           Rechargeable Lithium-Ion (1200 mAh)
+Battery Life:           Up to 35 hours (LED off) / Up to 20 hours (LED on)
+Charge Time:            Approximately 2.5 hours
+Wireless Range:         Up to 15 meters (50 feet)
+Weight:                 320g (11.3 oz)
+
+
+4. GETTING STARTED & CHARGING
+--------------------------------------------------------------------------------
+Before using your Aurora Pro-1000 for the first time, fully charge the battery.
+
+CHARGING INSTRUCTIONS:
+1. Plug the provided USB-C cable into the charging port on the left earcup.
+2. Connect the other end to a powered USB-A or USB-C port (5V, 1A minimum).
+3. The Status LED will display battery status:
+   - Solid Amber: Charging in progress
+   - Solid Green: Fully charged
+   - Blinking Red: Battery low (< 10%)
+
+Note: The headset cannot be used while charging.
+
+
+5. PAIRING & CONNECTIVITY
+--------------------------------------------------------------------------------
+5.1 BLUETOOTH PAIRING:
+1. Ensure the headset is powered off.
+2. Press and hold the Power Button for 10 seconds until the Status LED flashes 
+   alternating Green and Purple.
+3. Open Bluetooth settings on your host device (Smartphone, PC, Mac).
+4. Select "Aurora Pro-1000" from the list of available devices.
+5. Once connected, the Status LED will turn solid Green.
+
+5.2 2.4GHz WIRELESS USB TRANSCEIVER:
+1. Insert the USB-C dongle into an available port on your PC, PlayStation, or Switch.
+2. Turn on the headset.
+3. Press the Mode Switch Button on the right earcup to switch to 2.4GHz mode.
+4. The LED on the USB dongle and headset will turn solid White when connected.
+
+
+6. AUDIO SETTINGS & EQ MODES
+--------------------------------------------------------------------------------
+Cycle through 4 built-in EQ presets using the EQ Mode Switch on the right earcup:
+
+1. Standard / Flat (Default) - Balanced sound profile for general media and music.
+2. Bass Boost - Enhanced low-frequency profile for gaming and movies.
+3. Clarity / Vocal - Boosts mid-high frequencies for clear voice communications.
+4. Competitive Gaming - Attenuates bass and boosts high frequencies for footsteps 
+   and audio cues.
+
+
+7. CARE, MAINTENANCE & SAFETY
+--------------------------------------------------------------------------------
+- Do not expose the device to extreme temperatures (above 45°C / 113°F or below 0°C / 32°F).
+- Keep the headset away from liquids, moisture, and high humidity.
+- Clean ear cushions using a soft, slightly damp cloth. Isopropyl alcohol may be
+  used, but only after the cushions have been detached from the earcups.
+- Avoid listening at high volume levels for extended periods to prevent hearing damage.
+
+
+8. TROUBLESHOOTING
+--------------------------------------------------------------------------------
+PROBLEM: No sound from headset.
+SOLUTION:
+  - Verify headset is powered on and battery is charged.
+  - Ensure correct input mode (Bluetooth vs 2.4GHz) is selected.
+  - Check volume dial on right earcup and host device volume settings.
+
+PROBLEM: Microphone is not picking up audio.
+SOLUTION:
+  - Ensure the boom mic is firmly seated into the 3.5mm mic jack.
+  - Check if the Mic Mute button is toggled ON (Red light active).
+  - Verify input device settings on host computer or console.
+
+PROBLEM: Frequent wireless disconnections.
+SOLUTION:
+  - Move closer to the host device / USB dongle.
+  - Keep away from 2.4GHz signal interference (Wi-Fi routers, microwaves).
+    5GHz Wi-Fi networks do not affect the connection.
+
+
+9. WARRANTY & SUPPORT INFORMATION
+--------------------------------------------------------------------------------
+The Aurora Pro-1000 is backed by a 2-Year Limited Hardware Warranty from the 
+date of original purchase.
+
+For technical support, user guides, or warranty claims, please visit:
+Website:  https://www.aurora-audio-example.com/support
+Email:    support@aurora-audio-example.com
+Phone:    1-800-555-0199 (Mon-Fri, 9am - 5pm EST)
+
+10. FIRMWARE UPDATES
+--------------------------------------------------------------------------------
+Download the Aurora Companion app to check for firmware revisions. Updates are
+delivered over USB-C only and must not be interrupted once started.
+
+================================================================================
