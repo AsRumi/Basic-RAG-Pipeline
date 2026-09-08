@@ -1,8 +1,8 @@
 # conventions.md — Self-Maintaining Vector Database (Design Record)
 
 **Project:** Basic-RAG-Pipeline
-**Date of this record:** 2026-09-07
-**Status:** Design discussion complete. **No code has been written yet.** Awaiting two decisions (see [§12 Open Questions](#12-open-questions--blocking-decisions)).
+**Date of this record:** 2026-09-07 (revised same day — all blocking decisions now resolved)
+**Status:** Design discussion complete, **every blocking decision answered** (see [§12 Decisions](#12-decisions-resolved-2026-09-07)). **No code has been written yet.** Ready to implement Phase 1.
 
 This file exists so that a *new* Claude session (or a human) can pick up this exact problem with zero context loss. It captures the current repo state, the idea being pursued, the full design discussion including rejected approaches and the reasoning behind them, and the agreed implementation plan.
 
@@ -19,7 +19,9 @@ This file exists so that a *new* Claude session (or a human) can pick up this ex
 
 ## 2. Current repo state (verified 2026-09-07)
 
-Working, complete, basic RAG pipeline. Git branch `main`, clean tree. Latest commit `5838615 feat: Added multiple document ingestions and ChromaDB persistence.`
+Working, complete, basic RAG pipeline. Git branch `main`, clean tree. Latest commit `2290aca conventions.md creation`.
+
+**Branch plan:** the user is moving the current `main` to a `v1` branch and freeing `main` for the v2 work described in this document. So `v1` = the basic pipeline as documented in §2; `main` = the self-maintaining store being built.
 
 ### Live pipeline files (the actual code path)
 
@@ -39,10 +41,17 @@ Working, complete, basic RAG pipeline. Git branch `main`, clean tree. Latest com
 
 Be careful not to confuse `vector_store.py` (scratch) with the real store, which currently lives inline in `ingest.py`.
 
+### Known documentation drift (in `README.md`, not yet fixed)
+
+- Stack table says **"ChromaDB (in-memory)"**; `ingest.py:12` uses `PersistentClient`.
+- Project Structure block omits `chroma_db/` and still calls the root `rag-project/`.
+
+Left alone deliberately — `README.md` describes the v1 pipeline and will need a rewrite once v2 lands anyway.
+
 ### Data / config
 
 - `document.txt` (3.6 KB) and `Mongol Military.txt` (7.1 KB) — the two ingested corpora.
-- `chroma_db/` — persisted Chroma store.
+- `chroma_db/` — persisted Chroma store. **Does not exist on this machine.** The pipeline has not been run here yet, and the directory is gitignored so it never travels with the repo. Two consequences: nothing works until a first ingest runs, and the cosine-space fix in §7.2a is free right now because there is no existing store to rebuild.
 - `.env` — holds `GEMINI_API_KEY`.
 - `.venv/` — local virtualenv (Windows layout, `.venv/Lib/site-packages`).
 - `requirements.txt` — `langchain-text-splitters`, `sentence-transformers`, `chromadb`, `numpy`, `python-dotenv`, `google-genai`.
@@ -129,8 +138,24 @@ Add `status: active | superseded | deprecated` plus a `superseded_by` pointer. C
 ### 4.6 Human confidence scores do not compose
 Every author rates their own document a 9. Per-document manual scores drift and become meaningless. **Derive authority from source tier instead** (official spec = 100, engineering wiki = 60, Slack thread = 20), with a per-document override as the exception. Consistent, and there is one place to retune it. *(Deferred — see §5.)*
 
-### 4.7 Unit of identity is unresolved
-Superseding **chunks** means superseding arbitrary 300-character windows (`ingest.py:23`). "This chunk supersedes that chunk" is often incoherent, since a chunk is not a semantically atomic thing. The genuinely powerful version of this idea extracts **atomic claims** at ingest and versions *claims*, not chunks. Harder, but that is where it stops being a scoring tweak and becomes a self-maintaining knowledge base. **Still an open question.**
+### 4.7 Unit of identity
+Superseding **chunks** means superseding arbitrary 300-character windows (`ingest.py:23`). "This chunk supersedes that chunk" is often incoherent, since a chunk is not a semantically atomic thing.
+
+**What a "claim" would mean.** A chunk boundary is drawn by a character counter, which knows nothing about meaning. A *claim* is one atomic assertion extracted from the text. This chunk:
+
+> "The scheduler runs every 60 seconds. Do not call createTimeSlots directly; it is invoked internally. Logging is disabled by default in production."
+
+carries three unrelated facts. As claims:
+
+1. The scheduler runs every 60 seconds.
+2. `createTimeSlots` must not be called directly.
+3. Logging is disabled by default in production.
+
+If new content says *"Call createTimeSlots after setTimeSlots"*, it contradicts claim 2 **and only claim 2**. Superseding at chunk granularity retires the whole block, silently killing two correct facts as collateral damage. That is the real argument for claims — and it is the same argument that rules out *documents* as the unit, just at a smaller scale.
+
+**Why it is not being built yet:** claims need an extraction LLM call per chunk *on top of* adjudication calls, and they force a two-level store — you retrieve **chunks** (a bare claim reads poorly in a prompt, stripped of its context) but version **claims**, so every claim needs a pointer to its parent chunk and a chunk is only fully dead once all its claims are superseded.
+
+**Resolved: chunk, with chunk size raised. See §12.5.**
 
 ### 4.8 There is already a live staleness bug
 `ingest.py:30` upserts IDs as `{filename}-{index}`. Re-ingest a document that got *shorter* and the orphaned high-index chunks from the previous version survive forever, with no metadata to detect them. This argues for a metadata layer regardless of the rest of the feature.
@@ -190,7 +215,7 @@ Why not a bare content hash with no `source` prefix: identical text from two dif
 
 **(b) Chunk overlap manufactures fake duplicates.** With `chunk_size=300, chunk_overlap=50`, adjacent chunks share 50 characters *by construction* and will look like near-duplicates.
 - **Hard rule: never adjudicate two chunks from the same ingest batch against each other.**
-- At 300 characters chunks are sentence fragments; supersession judgments on fragments will be noisy. **Raising chunk size is recommended for this feature to work well.**
+- At 300 characters chunks are sentence fragments; supersession judgments on fragments will be noisy. **Decided: raise `chunk_size` to ~800–1000, keeping `chunk_overlap` proportional (~100–150).** A paragraph-sized chunk is far more semantically self-contained, which buys a good share of the claims benefit (§4.7) for zero extra machinery.
 
 ### 7.3 New module: `supersede.py`
 
@@ -275,27 +300,68 @@ Write **ten hand-authored pairs with expected verdicts** in something like `test
 
 Ten pairs is enough to catch a broken adjudicator prompt. Without this, a regression in the adjudicator is invisible until it has already damaged the store.
 
+**Source the pairs from the real diff.** Once the manual and its edited clone exist (§12.3), the edits made by hand *are* the ground truth — the user knows exactly which passages were changed into contradictions and which into refinements. Write those into `contradictions.jsonl` as the expected verdicts before running the adjudicator, not after.
+
 ---
 
-## 12. Open questions / blocking decisions
+## 12. Decisions (resolved 2026-09-07)
 
-**Asked, not yet answered:**
+Every question that was blocking is now answered. Recorded with the reasoning so none of it gets re-litigated.
 
-1. **Rebuild `chroma_db/` from scratch?** The cosine-space change forces it (see §7.2a), and re-ingesting the two existing documents is trivial. The alternative is a metadata-backfill script, judged not worth it at this corpus size.
-2. **Start at phase 1, or go straight through to the dry-run log (phase 2)?**
+### 12.1 Rebuild `chroma_db/`? — **Moot, and free**
 
-**Raised earlier, still unresolved:**
+The store does not exist on this machine (§2). There is nothing to rebuild and no backfill script to write. Create the collection with `metadata={"hnsw:space": "cosine"}` on the very first ingest and the §7.2a trap never happens. This is the cheapest this decision will ever be — the setting is fixed at creation time and cannot be changed afterwards.
 
-3. **What is the target corpus?** Operational instructions (where recency genuinely implies correctness) or general knowledge (where it does not)? The two current test documents are the latter, and the design differs sharply between the two.
-4. **Fully automatic supersession, or propose-then-approve?** The recommendation was to ship the audit log and dry-run mode *before* any automation.
-5. **Unit of identity: chunk, document, or claim?** (See §4.7.) Currently assumed to be **chunk**, which is the weakest of the three.
+### 12.2 Which phase to start at? — **Phase 1**
+
+Metadata + content-addressed ids + cosine space + `status` filter. No LLM, no automation. Externally observable behaviour is unchanged, and it fixes the orphan bug (§4.8) on its own merits.
+
+### 12.3 Target corpus — **A product manual, hand-versioned**
+
+`document.txt` and `Mongol Military.txt` are general knowledge, where recency implies nothing about correctness, and are the wrong test bed — acknowledged by the user.
+
+Plan: download a real manual for some arbitrary product, ingest it, then clone the file and hand-edit the clone to plant deliberate contradictions **and** deliberate refinements, and ingest that as a second document. This is operational-instruction content, which is the corpus type the whole feature is designed around. The hand-edits double as evaluation ground truth (§11).
+
+### 12.4 Simulating the time gap — **`--as-of`, never the wall clock**
+
+Both ingests will happen minutes apart in real life, which would leave no meaningful recency signal. No simulation machinery is needed: `ingested_at` is a `float` that *we* write, and the wall clock is merely the default when nothing is specified.
+
+```
+python ingest.py --name manual_v1.txt --as-of 2024-03-01
+python ingest.py --name manual_v2.txt --as-of 2025-08-01
+```
+
+The store now believes the two versions are 17 months apart.
+
+This is **not** a test-only hack. Invariant #4 already requires ordering by `ingested_at` rather than arrival order, precisely so that backfilling a genuinely old document next month cannot clobber this month's content. The test scenario and the production requirement are the same mechanism, which is why `--as-of` earns its place in the real CLI.
+
+**Test the reverse case too.** Ingest the edited clone with an *earlier* `--as-of` than the original. The system must **refuse** to supersede. If it supersedes anyway, arrival order has leaked into the comparison somewhere — that is a bug, and it is the single easiest invariant to break by accident.
+
+### 12.5 Unit of identity — **Chunk, with chunk size raised. Claims deferred.**
+
+Documents are ruled out: one document can legitimately produce several different verdicts against the store, and collapsing them to a single document-level verdict cannot represent that.
+
+Claims (explained in §4.7) are the theoretically correct unit, but are **deliberately not being built now.** They cost an extraction LLM call per chunk on top of every adjudication call — a large, permanent API bill paid against a problem that has not actually surfaced yet.
+
+Instead: stay at chunk granularity and raise `chunk_size` to ~800–1000 (§7.2b). Paragraph-sized chunks are far more semantically self-contained than 300-character fragments, which captures much of the claims benefit for none of the machinery.
+
+**The trigger to revisit:** if the phase-2 dry-run log shows *collateral damage* — correct facts being retired because they happened to share a chunk with a stale one — that is the evidence that chunks are insufficient, and claims become a phase 5. Do not build them before that evidence exists.
+
+### 12.6 Automation — **Fully automatic is the destination, not the starting point**
+
+The user wants a fully automatic system, and that is the end state. For now it stays propose-and-verify so that database updates can be inspected by hand.
+
+This does not change the phase plan in §10, it confirms it. Phases 2 and 3 are not optional detours around automation — they are how the similarity threshold gets tuned against real output from the actual manual, and how the adjudicator's verdicts are shown to be sane before anything is allowed to mutate. Turning phase 4 on against an untuned threshold is precisely the failure mode that quietly eats a knowledge base.
+
+**Flip the switch when:** the dry-run log shows verdicts you agree with across a full ingest of the manual, and the §11 evaluation pairs pass.
 
 ---
 
 ## 13. Environment notes
 
-- Windows 10, PowerShell primary shell; Git Bash also available.
-- Project root: `d:\VS Code\Python Codes\RAG Pipeline\Basic-RAG-Pipeline`
-- Virtualenv at `.venv` (Windows layout).
+- Windows 11 Pro, PowerShell primary shell; Git Bash also available.
+- Project root: `d:\Mutahar (I)\Basic RAG Pipeline`
+  *(The path recorded before — `d:\VS Code\Python Codes\RAG Pipeline\Basic-RAG-Pipeline` — was a different machine. This repo moves between PCs, so treat any absolute path here as advisory.)*
+- Virtualenv at `.venv` (Windows layout), interpreter at `.venv/Scripts/python.exe`.
 - `GEMINI_API_KEY` is read from `.env` via `python-dotenv` at `query.py:6-7`.
-- Generation model in use: `gemini-3.5-flash-lite`.
+- Generation model in use: **`gemini-3.5-flash-lite`** — confirmed correct by the user. (`README.md` said "2.5"; corrected by the user on 2026-09-07.)

@@ -125,7 +125,7 @@ rag-project/
 | Vector Store | ChromaDB (in-memory)                         |
 | Chunking     | LangChain `RecursiveCharacterTextSplitter`   |
 | Reranking    | `cross-encoder/ms-marco-MiniLM-L-6-v2`       |
-| Generation   | Gemini 2.5 Flash-Lite (`google-genai`)       |
+| Generation   | Gemini 3.5 Flash-Lite (`google-genai`)       |
 
 ---
 
