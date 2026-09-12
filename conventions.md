@@ -2,7 +2,7 @@
 
 **Project:** Basic-RAG-Pipeline
 **Date of this record:** 2026-09-07 (revised same day — all blocking decisions now resolved)
-**Status:** **Phases 1 and 2 implemented and verified** ([§14](#14-phase-1-implementation-record), [§16](#16-phase-2-implementation-record-2026-09-08)). All blocking decisions answered ([§12](#12-decisions-resolved-2026-09-07)). Next up: Phase 3, the LLM adjudicator — still logging only. See §18 for the measurement that makes it mandatory. Code style is recorded in [§15](#15-code-style-in-this-repository).
+**Status:** **Phases 1, 2 and 3 implemented and verified** ([§14](#14-phase-1-implementation-record), [§16](#16-phase-2-implementation-record-2026-09-08)). All blocking decisions answered ([§12](#12-decisions-resolved-2026-09-07)). Next up: Phase 4, the only mutating phase. See §21 for the adjudicator's first scored run. Code style is recorded in [§15](#15-code-style-in-this-repository).
 
 This file exists so that a *new* Claude session (or a human) can pick up this exact problem with zero context loss. It captures the current repo state, the idea being pursued, the full design discussion including rejected approaches and the reasoning behind them, and the agreed implementation plan.
 
@@ -291,7 +291,7 @@ Mitigations:
 |---|---|---|
 | **1** | Metadata + content-addressed ids + cosine space + `status` filter. No LLM, no automation. Everything is `active`; behaviour is unchanged. **Fixes the orphan bug on its own.** | Safe — **DONE 2026-09-07** |
 | **2** | Candidate detection + dry-run log. Read-only. Lets the threshold be tuned against real output. | Safe — **DONE 2026-09-08** |
-| **3** | LLM adjudicator, still logging only. | Safe |
+| **3** | LLM adjudicator, still logging only. | Safe — **DONE 2026-09-12** |
 | **4** | Auto-apply. | **Only mutating phase** |
 
 Phases 1–3 are reversible. By the time phase 4 runs, the log provides evidence that the verdicts are sane.
@@ -685,3 +685,80 @@ This was asked for directly, and it applies to every reply in chat. It does not 
 **Lead with the answer.** If they ask whether something works, the first sentence says whether it works. Reasoning comes after, and detail after that.
 
 **Be straight about mistakes.** Several conclusions in this file were wrong and had to be corrected by real data. Say so plainly in one sentence, correct it, and carry on. No apologising, no dwelling, and no burying the correction at the bottom of a long reply.
+
+---
+
+## 21. Phase 3 implementation record (2026-09-12)
+
+The LLM adjudicator, plus the nomination rework that §19 called for. **Still read-only: no `status` is ever changed.**
+
+### 21.1 What was built
+
+**`llm.py`** (new) holds the Gemini client and `GEMINI_MODEL`. `query.py` now imports from it instead of building its own client, so the model id lives in exactly one place.
+
+**`supersede.py`** gained the adjudicator and lost the threshold:
+
+- `CANDIDATES_PER_CHUNK = 3` and `SIMILARITY_FLOOR = 0.35` replace `SIMILARITY_THRESHOLD = 0.75`. Candidates are taken by rank; the floor only discards obvious noise.
+- Byte-identical pairs are marked `DUPLICATE` in `nominate()` and never reach the model.
+- `judge(earlier, later)` calls Gemini at `temperature = 0` with a `response_schema` pinning the verdict to the four allowed values, so parsing cannot drift.
+- `by_age()` labels the passages EARLIER and LATER using `ingested_at`, never arrival order.
+- `adjudicate(pairs)` fills `verdict` and `rationale` before the line is written, which keeps the log append-only.
+
+**`ingest.py`** adjudicates by default; `--no-adjudicate` skips the model for cheap nomination-only runs.
+
+### 21.2 Rate limiting is real and needed handling
+
+The first full run died on `429 RESOURCE_EXHAUSTED` — 28 calls fired as fast as the loop could issue them, against a per-minute free-tier quota. `judge()` now retries up to four times with an 8, 16, 32 second backoff, and only for quota errors; everything else raises immediately. The rerun completed with no failures.
+
+Anything that batches or parallelises adjudication later must keep this in mind. The §9 cost model counted calls but not their rate.
+
+### 21.3 Nomination now finds what it was missing
+
+All four edits with a real counterpart were nominated, including the interference refinement at **rank 2, similarity 0.4454** — the one the old 0.75 threshold discarded. Twelve chunks produced 36 pairs, 33 above the floor, of which 5 were settled free as exact duplicates. **28 model calls.**
+
+### 21.4 Verdicts against the known answers
+
+| Case | Expected | Got | |
+|---|---|---|---|
+| Negation: "can" → "cannot be used while charging" | CONTRADICTS | CONTRADICTS | pass |
+| Values: pairing 5s → 10s, Blue/Red → Green/Purple | CONTRADICTS | CONTRADICTS | pass |
+| Prohibition lifted: harsh chemicals → isopropyl allowed | CONTRADICTS | REFINES | see below |
+| **Refinement trap: interference → 2.4GHz only** | **REFINES** | **REFINES** | **pass** |
+| New section: firmware updates | INDEPENDENT | INDEPENDENT | pass |
+
+The trap passing is the result that matters. Its rationale was correct and specific: the later text narrows the warning without making the earlier one wrong.
+
+### 21.5 The isopropyl case is ambiguous, not a bug
+
+Investigated rather than assumed. Adding an explicit rule that a general prohibition covers specific members of its category **did not change the verdict**. But rewriting the earlier passage to say "Do not use isopropyl alcohol" instead of "Do not use harsh chemicals" flipped it to `CONTRADICTS` immediately.
+
+So the model reads the relationship correctly. It simply does not classify isopropyl alcohol as a harsh chemical — a judgment about the world, not about the text. The test case is weaker than intended because it requires that inference to be shared. The `createTimeSlots` example this edit was modelled on names *the same identifier* on both sides, which is why it is unambiguous and this is not.
+
+**The prompt was left alone.** It passes the case that matters, the sharpened rule bought nothing, and tuning against one ambiguous example risks breaking the trap.
+
+### 21.6 No false CONTRADICTS, and REFINES is over-applied in the safe direction
+
+All four `CONTRADICTS` verdicts trace to the genuine charging reversal. Nothing was called a contradiction that was not one.
+
+`REFINES` is applied loosely — several pairs that are really `INDEPENDENT` were called `REFINES` because one passage elaborates on a topic the other mentions. Both verdicts leave everything active, so the effect is nil. **Erring toward `REFINES` costs stale information surviving; erring toward `CONTRADICTS` destroys correct information. These are not comparable, and the observed bias is the right one.**
+
+### 21.7 The adjudicator narrates chunk boundaries as if they were edits
+
+Two rationales describe *packing* rather than authorship — "the later passage removes the troubleshooting section for frequent wireless disconnections", when in truth that text simply landed in a different chunk. Another said the later passage "prepends troubleshooting steps" to the warranty section, which is again just where the boundary fell.
+
+Both produced harmless `REFINES` verdicts here. The risk is that a chunking artefact reads as deliberate removal and earns a `CONTRADICTS`. **Worth watching before Phase 4**, and another consequence of chunks not being semantically atomic.
+
+### 21.8 One conflict produces several pairs, and only one gets quoted
+
+The single charging reversal generated **four** `CONTRADICTS` pairs, because the note appears in overlapping chunks on both sides. Those four resolve to only **two distinct stored chunks**, so Phase 4 would not act four times.
+
+Separately, when a chunk holds more than one conflict the rationale mentions only one of them. The chunk carrying both the charging note and the pairing steps was correctly marked `CONTRADICTS`, but its rationale cites only the charging sentence. The verdict and the resulting action are right; the audit trail is less complete than it looks. **If the log is to be trusted as a record of why something was retired, the adjudicator should be asked to list every conflict it finds, not just the decisive one.**
+
+### 21.9 Collateral damage check: clean on this run
+
+The two chunks Phase 4 would retire were tested line by line against v2. Every substantive line that would disappear is a line that was genuinely edited:
+
+- one chunk loses only the charging note
+- the other loses the charging note and the two pairing lines
+
+Everything else in both chunks still appears verbatim in v2 and therefore survives inside the incoming chunks. **No correct information would have been lost.** This is the §12.5 trigger condition, and it has not fired — chunk-level identity is holding up so far, and claims stay deferred.

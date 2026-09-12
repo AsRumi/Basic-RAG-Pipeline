@@ -6,10 +6,11 @@ import argparse
 import hashlib
 import os
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from store import documents, model
-from supersede import nominate, log, LOG_PATH
+from supersede import nominate, adjudicate, log, LOG_PATH
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
@@ -38,6 +39,8 @@ if __name__ == "__main__":
                         help = "Date this content is from (YYYY-MM-DD). Defaults to now.")
     parser.add_argument("--dry-run", dest = "dry_run", action = "store_true",
                         help = "Nominate and log candidates without storing anything.")
+    parser.add_argument("--no-adjudicate", dest = "adjudicate", action = "store_false",
+                        help = "Skip the model call and log candidates unjudged.")
     args, _ = parser.parse_known_args()
 
     source = os.path.basename(args.name) # ids must not depend on how the path was typed
@@ -58,6 +61,10 @@ if __name__ == "__main__":
 
     # nominated before the upsert, so a batch can never be compared against itself
     candidates = nominate(new_chunks, source, ingested_at)
+
+    if args.adjudicate:
+        adjudicate(candidates)
+
     log(candidates)
 
     if new_chunks and not args.dry_run:
@@ -74,9 +81,11 @@ if __name__ == "__main__":
 
     dated = datetime.fromtimestamp(ingested_at, timezone.utc)
     nominated = [pair for pair in candidates if pair["nominated"]]
+    verdicts = Counter(pair["verdict"] or "UNJUDGED" for pair in nominated)
 
     print(f"{'Dry run!' if args.dry_run else 'Ingestion Complete!'} "
           f"{len(new_chunks)} new chunks from {source}, dated {dated:%Y-%m-%d}")
     print(f"{len(stored)} already stored, collection now holds {documents.count()} chunks")
-    print(f"{len(nominated)} of {len(candidates)} candidate pairs above threshold, "
-          f"logged to {LOG_PATH}")
+    print(f"{len(nominated)} of {len(candidates)} pairs nominated, logged to {LOG_PATH}")
+    for verdict, n in sorted(verdicts.items()):
+        print(f"  {verdict}: {n}")

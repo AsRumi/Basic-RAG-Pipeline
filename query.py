@@ -1,10 +1,5 @@
-import os
-from dotenv import load_dotenv
-from google import genai
+from llm import client, GEMINI_MODEL
 from retriever import retrieve_and_rerank
-
-load_dotenv()
-client = genai.Client(api_key = os.getenv("GEMINI_API_KEY"))
 
 def build_prompt(query, results):
     context = ""
@@ -18,7 +13,7 @@ def build_prompt(query, results):
 def ask(query):
     results = retrieve_and_rerank(query, 3)
     prompt = build_prompt(query, results)
-    response = client.models.generate_content(model = "gemini-3.5-flash-lite", contents = prompt)
+    response = client.models.generate_content(model = GEMINI_MODEL, contents = prompt)
     return response.text, results
 
 if __name__ == "__main__":
