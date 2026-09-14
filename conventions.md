@@ -1,10 +1,125 @@
 # conventions.md — Self-Maintaining Vector Database (Design Record)
 
-**Project:** Basic-RAG-Pipeline
-**Date of this record:** 2026-09-07 (revised same day — all blocking decisions now resolved)
-**Status:** **Phases 1, 2 and 3 implemented and verified** ([§14](#14-phase-1-implementation-record), [§16](#16-phase-2-implementation-record-2026-09-08)). All blocking decisions answered ([§12](#12-decisions-resolved-2026-09-07)). Next up: Phase 4, the only mutating phase. See §21 for the adjudicator's first scored run. Code style is recorded in [§15](#15-code-style-in-this-repository).
+**Project:** Basic-RAG-Pipeline (branch `main`; v1 preserved at `v1-stable`)
+**Last updated:** 2026-09-14
+**Last commit:** `c97535a LLM module added. LLM Adjudicator improved.` — Phase 4 built and verified, not yet committed.
 
-This file exists so that a *new* Claude session (or a human) can pick up this exact problem with zero context loss. It captures the current repo state, the idea being pursued, the full design discussion including rejected approaches and the reasoning behind them, and the agreed implementation plan.
+---
+
+# START HERE
+
+Read this section, then §25 (Phase 4 implementation record), then §20 (how to talk to the user). Everything else is reference you can consult as needed. **The user wants this project finished quickly — do not re-derive settled decisions or re-run settled experiments.**
+
+## What this project is
+
+A working RAG pipeline is being upgraded so the vector store **maintains itself**: when a newer document contradicts or duplicates something already stored, the older record is retired automatically. Nothing is ever deleted — records are tombstoned by flipping `status` to `superseded`, and the retriever filters on `status: "active"`.
+
+## Where it stands: all four phases are done and verified. The store now maintains itself.
+
+| Phase | What | State |
+|---|---|---|
+| 1 | Metadata, content-addressed ids, cosine space, `status` filter | **Done 2026-09-07** |
+| 2 | Candidate nomination + append-only dry-run log | **Done 2026-09-08** |
+| 3 | LLM adjudicator, logging only | **Done 2026-09-12** |
+| 4 | Apply the verdicts — flip `status`, set `superseded_by` | **Done 2026-09-14 — see §25** |
+
+What remains is in §24: the evaluation set, the learning guide, and a `README.md` that no longer describes v1.
+
+## The live code
+
+| File | Role |
+|---|---|
+| `store.py` | Embedding model, Chroma client, the collection. Guards that the space is cosine. |
+| `llm.py` | Gemini client and `GEMINI_MODEL`. The model id lives here only. |
+| `ingest.py` | Chunk, embed, write, with `--as-of`, `--dry-run`, `--no-adjudicate`, `--apply` |
+| `supersede.py` | `nominate()`, `judge()`, `adjudicate()`, `apply()`, the log, and the report |
+| `admin.py` | `--list`, `--stats`, `--rollback`, `--reapply`. The audit and undo surface. |
+| `retriever.py` | Vector search filtered to `status: "active"`, then cross-encoder re-rank |
+| `query.py` | Prompt, Gemini call, REPL that prints sources |
+
+`chunker.py`, `embeddings.py`, `vector_store.py` are **scratch files from the original learning exercise and are not on the live path.** Do not import them, do not fix them, do not treat `chunker.py`'s hand-written `chunk_text` as how chunking works.
+
+## Exact state of the store right now
+
+41 chunks, cosine space, **34 `active` and 7 `superseded`** — the Phase 4 verification run against the fixture has been applied and left in place.
+
+| Source | Active | Superseded | `ingested_at` |
+|---|---|---|---|
+| `Aurora_Pro_1000_UserManual.txt` | 3 | 7 | 2025-01-15 |
+| `Aurora_Pro_1000_UserManual-v2.txt` | 12 | 0 | 2026-09-14 |
+| `Mongol Military.txt` | 13 | 0 | 2025-08-01 |
+| `document.txt` | 6 | 0 | 2024-03-01 |
+
+**The fixture is now ingested**, which is a change from every earlier phase. `supersession_log.jsonl` holds that applied run: 36 pairs, 33 nominated, 7 applied. To get back to the pre-Phase-4 store, either run `python admin.py --rollback` (which restores the 7 records but leaves the 12 v2 chunks in place) or rebuild from scratch as below.
+
+## The test fixture and its known answers
+
+`Aurora_Pro_1000_UserManual-v2.txt` is the manual with five deliberate edits. **These are the ground truth for evaluating any change to the adjudicator.** Re-run and re-score after touching the prompt, the floor, or `CANDIDATES_PER_CHUNK`.
+
+| Edit | Correct verdict | Phase 3 result |
+|---|---|---|
+| "can be used while charging" → "cannot" | CONTRADICTS | correct |
+| Pairing: 5s → 10s, Blue/Red → Green/Purple | CONTRADICTS | correct |
+| "no harsh chemicals" → "isopropyl allowed if detached" | CONTRADICTS | got REFINES — **ambiguous case, not a bug, see §21.5** |
+| Interference → "2.4GHz only, 5GHz fine" | **REFINES** | **correct — this is the trap case, it must keep passing** |
+| New firmware section | INDEPENDENT | correct |
+
+## Commands
+
+```
+python ingest.py --name FILE.txt --as-of YYYY-MM-DD      # real ingest, judges but changes nothing
+python ingest.py --name FILE.txt --apply                 # ingest and retire what it replaces
+python ingest.py --name FILE.txt --dry-run               # nominate + adjudicate, store nothing
+python ingest.py --name FILE.txt --dry-run --no-adjudicate   # free, no model calls
+python supersede.py                                      # report the log
+python supersede.py --all                                # include pairs below the floor
+python admin.py --stats                                  # counts by source and status
+python admin.py --list                                   # what is retired and what replaced it
+python admin.py --rollback [--since YYYY-MM-DD]          # undo, replaying the log backwards
+python admin.py --reapply  [--since YYYY-MM-DD]          # redo, replaying the log forwards
+python query.py                                          # interactive REPL
+```
+
+`--apply` is opt-in and off by default, and it refuses to run with `--dry-run`.
+
+`supersession_log.jsonl` is **append-only**. Delete it before a fresh run or two runs will be interleaved in the report.
+
+## Rebuilding the store from scratch
+
+`chroma_db/` is gitignored and **never travels with the repo.** A fresh clone, or a move to another machine, starts with no store at all and nothing works until it is rebuilt.
+
+Rebuild it with **exactly these dates.** They are not arbitrary: `ingested_at` decides which record is older, and the Phase 4 verification numbers in §23.7 only reproduce if these match.
+
+```
+Remove-Item -Recurse -Force chroma_db          # only if one already exists
+python ingest.py --name document.txt --as-of 2024-03-01 --no-adjudicate
+python ingest.py --name "Mongol Military.txt" --as-of 2025-08-01 --no-adjudicate
+python ingest.py --name Aurora_Pro_1000_UserManual.txt --as-of 2025-01-15 --no-adjudicate
+Remove-Item supersession_log.jsonl             # discard nomination noise from the rebuild
+```
+
+`--no-adjudicate` matters. Without it the second and third ingests pay for model calls to judge documents against each other, which is pure waste during a rebuild.
+
+Afterwards the store must read **29 chunks, cosine space, all `active`**, split 6 / 13 / 10 across the three sources. If it does not, stop and find out why before building anything on top of it.
+
+**Do not ingest `Aurora_Pro_1000_UserManual-v2.txt` during a rebuild.** It is the Phase 4 test fixture and must stay out of the store until `--apply` exists.
+
+The chunk ids quoted in §23.7 also depend on `CHUNK_SIZE = 800` and `CHUNK_OVERLAP = 150`. Change either and those ids no longer exist.
+
+## Traps that have already cost time — do not repeat them
+
+1. **Sections 17 and parts of 18 are WRONG and were retracted.** §17 concluded chunk-boundary drift was harmless; §19 disproved that with real data. §18.3 said a 0.75 threshold was fine; it is not. **If §17, §18 and §19 appear to disagree, §19 wins.**
+2. **Never gate nomination on an absolute similarity score.** A byte-identical chunk scores 1.0000 and a flat contradiction scores 0.9966. No cutoff separates them. Nomination takes the top N by rank with a low floor; the LLM decides. This is invariant #2 and it is backed by measurement (§18, §19).
+3. **`nominate()` must run before `documents.upsert`.** That is what stops a batch being compared against itself (invariant #3). It is enforced by ordering, not by a filter — move it and the invariant breaks silently.
+4. **Heredocs mangle backslash escapes.** Writing Python containing `\n` through a bash heredoc has corrupted this codebase twice. Build escapes with `chr(92)` or use the Write tool.
+5. **The free-tier Gemini quota is per minute.** A burst of ~28 calls hits `429 RESOURCE_EXHAUSTED`. `judge()` already retries with backoff; keep that if you batch.
+6. **Changing `CHUNK_SIZE` invalidates the whole store.** Stored chunks were split with the settings in force at ingest. Any change means re-ingesting everything.
+7. **The byte-identical test on `DUPLICATE` is not a similarity threshold — do not "simplify" it into one.** A model-judged duplicate at 0.4483 tried to retire the warranty section because a table of contents listed it (§25.3). `DUPLICATE` acts only on exact text equality. `CONTRADICTS` is untouched by this and invariant #2 still stands.
+8. **A rollback cannot be undone by re-running the ingest.** The chunks are already stored, so nothing is nominated and nothing can be applied. Use `python admin.py --reapply` (§25.5).
+
+## What to do right now
+
+Phase 4 is built, verified and applied — read **§25** for what it does and what it found. The remaining work is in **§24**: the evaluation set, the learning guide, and the `README.md` rewrite. **§23 is now a historical spec, and two of its numbers were wrong — §25.2 says which.**
 
 ---
 
@@ -18,9 +133,11 @@ This file exists so that a *new* Claude session (or a human) can pick up this ex
 
 ---
 
-## 2. Current repo state (verified 2026-09-07)
+## 2. Repo state as it was at the START of this work (2026-09-07)
 
-Working, complete, basic RAG pipeline. Git branch `main`, clean tree. Latest commit `2290aca conventions.md creation`.
+> **Historical. For the current state see START HERE at the top of this file.** This section describes the v1 pipeline before any of the supersession work, and is kept because the design critique in §4 refers to it. The code described here no longer exists in this form; it is preserved on the `v1-stable` branch.
+
+Working, complete, basic RAG pipeline. Git branch `main`, clean tree. Latest commit at the time: `2290aca conventions.md creation`.
 
 **Branch plan:** the user is moving the current `main` to a `v1` branch and freeing `main` for the v2 work described in this document. So `v1` = the basic pipeline as documented in §2; `main` = the self-maintaining store being built.
 
@@ -275,10 +392,10 @@ List superseded records, un-supersede (rollback), print stats.
 
 ## 9. Cost model
 
-A 100-chunk document averaging 3 candidates each is **~300 LLM calls per ingest.**
+A 100-chunk document averaging 3 candidates each is **~300 LLM calls per ingest.** **Measured for real in §22** — the estimate held, but it only applies to a document's *first* ingest. Re-ingesting a revision costs far less, because unchanged chunks are skipped before nomination.
 
 Mitigations:
-- Threshold aggressively so few pairs ever reach the LLM.
+- ~~Threshold aggressively so few pairs ever reach the LLM.~~ **Wrong, and dangerous. See §19 and §22.** Thresholding cannot separate a contradiction from a duplicate, and the pairs a high threshold discards are exactly the ones worth judging.
 - Batch multiple candidate pairs into one call.
 - Cache verdicts keyed on the **content-hash pair**, so re-ingests are free.
 - `gemini-3.5-flash-lite` (already in use at `query.py:21`) is the right tier for this.
@@ -366,11 +483,11 @@ This does not change the phase plan in §10, it confirms it. Phases 2 and 3 are 
 
 ## 13. Environment notes
 
-- Windows 11 Pro, PowerShell primary shell; Git Bash also available.
+- Windows 11 Pro, PowerShell primary shell; Git Bash also available. **Run Python as `.venv/Scripts/python.exe`** rather than relying on an activated shell.
 - Project root: `d:\Mutahar (I)\Basic RAG Pipeline`
   *(The path recorded before — `d:\VS Code\Python Codes\RAG Pipeline\Basic-RAG-Pipeline` — was a different machine. This repo moves between PCs, so treat any absolute path here as advisory.)*
 - Virtualenv at `.venv` (Windows layout), interpreter at `.venv/Scripts/python.exe`.
-- `GEMINI_API_KEY` is read from `.env` via `python-dotenv` at `query.py:6-7`.
+- `GEMINI_API_KEY` is read from `.env` via `python-dotenv` in **`llm.py`**, which owns the Gemini client. `query.py` and `supersede.py` both import from it, so the model id and the key handling live in exactly one place.
 - Generation model in use: **`gemini-3.5-flash-lite`** — confirmed correct by the user. (`README.md` said "2.5"; corrected by the user on 2026-09-07.)
 
 ---
@@ -762,3 +879,271 @@ The two chunks Phase 4 would retire were tested line by line against v2. Every s
 - the other loses the charging note and the two pairing lines
 
 Everything else in both chunks still appears verbatim in v2 and therefore survives inside the incoming chunks. **No correct information would have been lost.** This is the §12.5 trigger condition, and it has not fired — chunk-level identity is holding up so far, and claims stay deferred.
+
+---
+
+## 22. What adjudication actually costs (measured 2026-09-14)
+
+Real numbers from the Phase 3 run on the twelve-chunk clone, not estimates.
+
+### 22.1 The measurement
+
+| | |
+|---|---|
+| Model calls | 28 |
+| Input tokens, total | 15,589 |
+| Input tokens per call | 557 |
+| Output tokens, total | ~1,600 |
+| Of which the fixed instruction block | **276 tokens per call, 49% of all input** |
+
+For one document revision on `gemini-3.5-flash-lite` this is a rounding error. Check current pricing rather than trusting a figure written here.
+
+### 22.2 Why it is cheaper than it looks: cost tracks *edits*, not document size
+
+Because ids are content-addressed, a chunk whose text has not changed is already stored and is **skipped before nomination ever runs.** So re-ingesting a revision costs in proportion to how much changed.
+
+Measured on the same file, chunked identically:
+
+| Ingested as | New chunks | Pairs nominated |
+|---|---|---|
+| `Aurora_Pro_1000_UserManual-v2.txt` (new source) | 12 | 36 |
+| `Aurora_Pro_1000_UserManual.txt` (a revision) | **7** | **21** |
+
+On a 500-chunk manual with ten edited sections, a revision judges roughly fifteen chunks, not five hundred.
+
+**The expensive case is a large document's first entry into a populated store**, where every chunk is new: roughly chunks × `CANDIDATES_PER_CHUNK`. Five hundred chunks would be around 1,500 calls.
+
+### 22.3 Why this runs at ingest and never at query time
+
+Supersession is a fact about the store, not an opinion about a question. Decide once at write time and every later query gets the benefit through a metadata filter that costs nothing. Adjudicating at query time would mean a model call on every question forever, latency on every answer, and a decision re-made — possibly differently — each time, with nothing recorded. Ingests are rare, queries are constant, so the expensive thinking belongs on the rare side. It is also what makes the audit trail possible: a supersession is a dated, reversible, inspectable fact.
+
+### 22.4 Where the waste actually is
+
+**Sixteen of the twenty-eight calls returned `INDEPENDENT`.** Over half the spend confirmed that unrelated things are unrelated.
+
+But note *which* things. All 36 candidates came from the Aurora manual — **not one** came from `Mongol Military.txt` or `document.txt`, despite both sitting in the same collection. Vector search already filters across documents perfectly well on its own. The wasted calls are same-document comparisons: the specifications section against the packing list, which look alike because they share vocabulary and formatting.
+
+**Do not try to fix this by raising the floor.** The verdict bands overlap:
+
+| Verdict | Similarity range |
+|---|---|
+| `INDEPENDENT` | 0.3571 – 0.6129 |
+| `REFINES` | 0.4454 – 0.9234 |
+| `CONTRADICTS` | 0.5639 – 0.9970 |
+
+A floor of 0.44 would save four calls and lose nothing — but only by a margin of 0.0004 against the interference edit at 0.4454. That is luck specific to this document, not a setting that generalises. At 0.45 real pairs start disappearing. This is the same lesson as §19, arriving from the cost side instead of the correctness side.
+
+### 22.5 The optimisations that are actually safe
+
+1. **Batch several pairs per call.** Half of every request is the same 276-token instruction block. Six pairs in one request sends it once instead of six times. Risk: cross-contamination between pairs in one context — verify against the §11 fixture before trusting it.
+2. **Cache verdicts on the content-hash pair.** The same two passages never need judging twice. Makes repeat ingests free.
+3. **Context caching** on the instruction block, if the API tier supports it.
+
+None are built. All preserve correctness, which is the bar — lowering the standard of judgment is not on this list.
+
+---
+
+## 23. Phase 4 specification — BUILD THIS NEXT
+
+The only phase that writes to the store. Everything needed to implement it is here.
+
+### 23.1 What it does
+
+Turn verdicts into state. For each adjudicated pair:
+
+| Verdict | Action |
+|---|---|
+| `DUPLICATE` | the **older** record → `status: "superseded"` |
+| `CONTRADICTS` | the **older** record → `status: "superseded"` |
+| `REFINES` | nothing, both stay active |
+| `INDEPENDENT` | nothing, both stay active |
+
+Marking is metadata-only:
+
+```python
+documents.update(ids = [old_id],
+                 metadatas = [{**old_metadata,
+                               "status": "superseded",
+                               "superseded_by": winning_new_id,
+                               "superseded_at": time.time()}])
+```
+
+Embeddings and text are never touched. **Nothing is ever deleted.**
+
+### 23.2 Ordering — this is the part that is easy to get wrong
+
+```
+chunk  ->  nominate  ->  adjudicate  ->  upsert  ->  apply  ->  log
+                ^                          ^          ^         ^
+                |                          |          |         |
+    before the write, so a batch     new chunks   only now   records what
+    cannot be compared with itself   must exist   can they   was actually
+    (invariant #3)                   before a     be pointed  done
+                                     pointer      at
+                                     names them
+```
+
+`nominate()` must stay **before** the upsert and `apply()` must come **after** it, because `superseded_by` names a chunk that has to exist. `log()` moves to **last**, so each line records whether the mutation was actually applied. Today `log()` runs before the upsert — **that has to change.**
+
+### 23.3 Guards, each of which is load-bearing
+
+1. **Only supersede when `older == "old"`.** If the incoming chunk is the older one, superseding the stored record would let a backfilled old document clobber newer content. Log the verdict, apply nothing, and mark it for review. This is invariant #4.
+2. **Deduplicate targets.** One real conflict produced **four** pairs in the Phase 3 run, resolving to two distinct stored chunks (§21.8). Group by `old_id` and act once.
+3. **Pick a winner when several new chunks target the same old chunk.** Use the highest similarity. Record the choice.
+4. **Skip records already superseded.** Applying twice must be a no-op.
+5. **`--dry-run` must never apply.** Assert it.
+6. **Never hard-delete.** Invariant #1.
+
+### 23.4 CLI
+
+Add `--apply`, **opt-in and off by default.** The user has said the end state is fully automatic but wants to verify updates by hand first (§12.6). Ship it opt-in, let them watch it work on the fixture, then flip the default once they say so.
+
+### 23.5 Log schema additions
+
+Add to each pair record: `applied` (bool), `applied_at` (float, `0` when not applied), and `skipped_reason` (str, `""` when applied — e.g. `"incoming chunk is older"`, `"target already superseded"`). Keep every existing field so old log lines stay readable.
+
+### 23.6 Rollback — build it in the same pass, not later
+
+§7.5 designates the log as the rollback path, and the feature is not safe to automate without one. Build `admin.py` (§7.6):
+
+- `--list` — show superseded records with what replaced them and when
+- `--rollback [--since TIMESTAMP]` — replay the log backwards, restoring `status: "active"`, `superseded_by: ""`, `superseded_at: 0.0`
+- `--stats` — counts by source and status
+
+### 23.7 Verification plan — exact expected numbers
+
+> **Two numbers in this table are wrong and were corrected by the real run. See §25.2.** "Exactly 2 flipped" and "39 active" counted only the `CONTRADICTS` pairs and forgot that §23.1 makes `DUPLICATE` act too. The rest of the table held exactly.
+
+Run against the fixture, which has known answers.
+
+```
+Remove-Item supersession_log.jsonl
+python ingest.py --name Aurora_Pro_1000_UserManual-v2.txt --apply
+```
+
+Expected:
+
+| Check | Expected |
+|---|---|
+| Store count | 29 → **41** (12 new chunks added) |
+| Records flipped to `superseded` | **exactly 2** |
+| Their ids | `Aurora_Pro_1000_UserManual.txt::acc646e8c513` and `::4d16f56ed232` |
+| Active count afterwards | **39** |
+| Superseded records still present via `documents.get()` | yes |
+| Superseded records returned by `retrieve()` | **no** |
+
+**The deliverable, in one line.** Before Phase 4, `python query.py` asked how long to hold the power button answers **"5 seconds"** — the stale value, because only v1 is stored. After Phase 4 it must answer **"10 seconds"**. That single behaviour change is the entire feature working end to end. Run it before and after and show the user both.
+
+Then confirm `admin.py --rollback` returns the store to 41 records with 41 active, and that the query reverts to giving both answers.
+
+### 23.8 Open decisions inside Phase 4 — settle these with the user, they are small
+
+1. **Should `supersession_log.jsonl` be committed to git?** Currently ignored (§16.5). It is the rollback path, and a rollback path outside version control is one `git clean` from gone. **Decide before shipping `--apply`.**
+2. **Same-source orphans (§14.5).** A chunk deleted in v2 lingers as `active` forever, because nothing walks the previous version to notice its absence. This is a *different* procedure from supersession — a set difference between two ingests of one source, needing no similarity search and no LLM. Either implement it or explicitly accept the gap.
+3. **What to do when the incoming chunk is older.** Spec above says log and skip. Confirm that is what the user wants.
+
+### 23.9 Known weaknesses to carry into Phase 4
+
+- **The adjudicator narrates chunk boundaries as if they were edits** (§21.7). Two rationales described text landing in a different chunk as the later version "removing" a section. Harmless `REFINES` verdicts this time; a `CONTRADICTS` from the same confusion would retire good content. Watch for it in the applied log.
+- **Rationales report only one conflict per pair** (§21.8). A chunk holding two conflicts gets the right verdict but an incomplete explanation. If the log is to justify what was retired, ask the adjudicator to list every conflict it finds.
+- **Collateral damage has not fired yet** (§21.9). The two chunks Phase 4 would retire lose only lines the user genuinely edited. This is the §12.5 trigger for claim-level identity, and it remains unfired. Re-check it after every real apply.
+
+---
+
+## 24. What remains after Phase 4
+
+Ordered by what the user gets for the effort.
+
+### 24.1 Required to call the feature finished
+
+1. ~~**Phase 4 + `admin.py` rollback** (§23).~~ **Done 2026-09-14, see §25.**
+2. **The evaluation set (§11).** Ten hand-written pairs with expected verdicts in `tests/contradictions.jsonl`, including the `createTimeSlots` contradiction, a refinement built to look like a contradiction, and a negation pair. Four of these already exist as the five clone edits and their known answers — write them down properly rather than re-deriving them. Without this, a regression in the adjudicator prompt is invisible until it has already damaged the store.
+3. **The learning guide the user asked for.** A walkthrough of everything v2 changed and why, written for someone learning the material rather than as a reference. This is why prose was stripped out of the source files (§15) — the explanation was always meant to live somewhere it can be read in order. Draw on §17 through §22, which contain the real measurements and the two corrections.
+4. **Rewrite `README.md`.** It still describes v1 and has known drift (§2). It should cover supersession, the tombstone model, and the new commands.
+
+### 24.2 Worth doing, not required
+
+- **Batch adjudication and verdict caching** (§22.5). Only worth it if cost becomes real.
+- **Delete or quarantine the scratch files.** `chunker.py`, `embeddings.py`, `vector_store.py` are learning exercises that actively mislead — `chunker.py`'s naive splitter caused a wrong conclusion in §17. Move them to `scratch/` or drop them; they are preserved in `v1-stable` either way.
+- **The authority/confidence weight (§5, §4.6).** Parked deliberately, never cancelled. If it is revived, it **must be additive**, never multiplicative — re-rank scores are signed logits ranging roughly −11 to +11, and multiplying a negative score by an authority factor improves its rank (§4.4, confirmed in practice at §14.4).
+
+### 24.3 Explicitly deferred — do not start these unprompted
+
+- **Claim-level identity (§4.7, §12.5).** The theoretically correct unit, deliberately not built. Two independent arguments now support it: collateral damage, and nomination precision (§19). The trigger is collateral damage appearing in a real applied log. **It has not fired.** Do not build this without the user asking.
+- **Re-chunking the corpus.** Any change to `CHUNK_SIZE` requires re-ingesting every document. Chunk size was also measured to be an unreliable lever (§19) — do not tune it hoping to improve nomination.
+
+---
+
+## 25. Phase 4 implementation record (2026-09-14)
+
+The store writes for the first time. `--apply` turns verdicts into `status` changes and `admin.py` can undo them. Built to the §23 spec, with two corrections and one addition, all recorded below.
+
+### 25.1 What was built
+
+`supersede.py` gained `skip_reason()` and `apply()`. `skip_reason()` returns the single reason a pair cannot be acted on, or `""` if it can; `apply()` uses it to partition the pairs, groups the survivors by `old_id`, picks the highest-similarity winner per target, and calls `documents.update`. Every pair now also carries `applied`, `applied_at` and `skipped_reason`, defaulting to `False` / `0.0` / `"--apply not given"` so a log line always says why nothing happened.
+
+`ingest.py` gained `--apply`, off by default and refused outright alongside `--dry-run`. The order is now `chunk -> nominate -> adjudicate -> upsert -> apply -> log`. `apply()` sits inside the `not args.dry_run` branch after the upsert, so a dry run cannot reach it even if the CLI guard were removed.
+
+`admin.py` is new: `--list`, `--stats`, `--rollback`, `--reapply`, the last two sharing one `replay()` helper.
+
+### 25.2 Two numbers in the §23.7 table were wrong
+
+The spec expected **2** records flipped and **39** active. The real run flipped **7** and left **34**. The table counted only the `CONTRADICTS` pairs and overlooked that §23.1 makes `DUPLICATE` act too: five stored v1 chunks are byte-identical to incoming v2 chunks and were retired as duplicates, which is the deduplication half of the feature working as designed. Every other line of that table held exactly.
+
+### 25.3 A model-judged `DUPLICATE` would have retired the warranty section
+
+The Phase 3 log already contained the failure. At similarity **0.4483** the model called the v2 *table of contents* a duplicate of the v1 **warranty section**, reasoning that the contents page lists warranty as its final item. Applied literally, that retires the entire warranty text from retrieval because a contents page mentions the word.
+
+**The rule now is that `DUPLICATE` only acts when `new_text == old_text` exactly.** A duplicate the model merely asserts is logged as `duplicate judged by model, not byte-identical` and left alone. `CONTRADICTS` is unaffected, because a contradiction is a claim about meaning that only the model can make; "nothing changed" is a claim about bytes that does not need it.
+
+This is **not** a similarity threshold and does not touch invariant #2. It is an equality test on the text. Two pairs were blocked by it in the verification run: the table-of-contents case above, and the audio-presets chunk at 0.673 whose text shifted across a chunk boundary — that second one was probably a fair duplicate, and leaving it active is the cheap side of the error.
+
+### 25.4 Verification results
+
+Run as `python ingest.py --name Aurora_Pro_1000_UserManual-v2.txt --apply` against the 29-chunk store.
+
+| Check | §23.7 expected | Actual |
+|---|---|---|
+| Store count | 29 -> 41 | **41** |
+| Records flipped to `superseded` | 2 | **7** (5 byte-identical + 2 contradictions) |
+| `::acc646e8c513` and `::4d16f56ed232` retired | yes | **yes** |
+| Active afterwards | 39 | **34** |
+| Superseded still returned by `documents.get()` | yes | **yes, with `superseded_by` and a timestamp on all 7** |
+| Superseded returned by `retrieve()` | no | **no**, probed with six queries aimed straight at the retired text |
+| Power button answer | 5s -> 10s | **"5 seconds" before, "10 seconds" after** |
+
+Deduplication fired twice, exactly as §23.3 predicted: the two real contradictions each nominated their target from two different incoming chunks, and each target was retired once.
+
+Applying twice is a no-op. Replaying all 36 logged pairs through `apply()` a second time changed nothing and reported `target already superseded` seven times.
+
+### 25.5 Rollback alone leaves the store stranded, so `--reapply` was added
+
+`admin.py --rollback` restored all 7 records and returned the store to 41 chunks, 41 active, with `query.py` once again giving both the 5-second and the 10-second answer.
+
+**But the rollback could not be undone.** Re-running the ingest with `--apply` did nothing: content-addressed ids mean all 12 incoming chunks were already stored, so `new_chunks` was empty, nothing was nominated, and there was nothing left to act on. The only route back would have been deleting chunks and paying for a second adjudication. A rollback that cannot itself be reversed is its own trap, so `--reapply` replays the same log forwards, restoring `status`, `superseded_by`, and the **original** `applied_at` so the audit trail still records when the decision was made rather than when it was replayed. Both directions are idempotent.
+
+This is an addition beyond the §23.6 spec. It is small and it costs no model calls, but it was not asked for.
+
+### 25.6 Collateral damage: checked after the real apply, still clean
+
+§24.3 makes collateral damage in an applied log the trigger for claim-level identity, so it was measured rather than assumed. For each retired chunk, every line longer than 25 characters was searched for across the whole active corpus:
+
+| Retired chunk | Lines found nowhere in the active corpus |
+|---|---|
+| The five byte-identical duplicates | **0 each** |
+| `::acc646e8c513` | 1 — "The headset can be used while charging" |
+| `::4d16f56ed232` | 3 — the same charging line, "hold the Power Button for 5 seconds", "the Status LED will turn solid Blue" |
+
+Every one of those is content the fixture's edits deliberately reversed. Nothing incidental was lost. **The trigger has still not fired** and claim-level identity remains deferred.
+
+### 25.7 Verdicts drift slightly between runs at temperature 0
+
+The Phase 3 run recorded 16 `INDEPENDENT` and 6 `REFINES`; this run recorded 15 and 7 on the same inputs. One pair moved. All five known-answer edits scored identically to Phase 3, including the interference trap case, which stayed `REFINES` at 0.4454 and was not applied.
+
+Temperature 0 is not determinism. This is the argument for the evaluation set in §24.1 being written down properly: a one-pair drift is invisible today, and a drift that lands on a known answer would be invisible too.
+
+### 25.8 What Phase 4 did not settle
+
+- **Same-source orphans (§23.8 item 2) are an accepted gap**, decided by the user rather than overlooked. A chunk deleted in v2 still lingers as `active` forever. It needs a set difference between two ingests of one source — no similarity search, no model call — and it is not built.
+- **The incoming-older path has never fired on real data.** All 36 pairs in both runs have the stored chunk as the older one. The guard was instead exercised directly: a synthetic backfill pair pointed at a real stored chunk applied nothing, reported `incoming chunk is older`, and left the record active. All nine `skip_reason()` branches were checked this way. The evaluation set in §24.1 should still include a genuine backfill document so the path runs end to end.
+- **`supersession_log.jsonl` is now tracked in git**, removed from `.gitignore` by the user before this work. That settles §23.8 item 1 and §16.5: the rollback path is under version control.

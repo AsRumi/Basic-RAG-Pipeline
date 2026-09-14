@@ -10,7 +10,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from store import documents, model
-from supersede import nominate, adjudicate, log, LOG_PATH
+from supersede import nominate, adjudicate, apply, log, LOG_PATH
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
@@ -41,7 +41,12 @@ if __name__ == "__main__":
                         help = "Nominate and log candidates without storing anything.")
     parser.add_argument("--no-adjudicate", dest = "adjudicate", action = "store_false",
                         help = "Skip the model call and log candidates unjudged.")
+    parser.add_argument("--apply", action = "store_true",
+                        help = "Retire the records the verdicts replace. Off by default.")
     args, _ = parser.parse_known_args()
+
+    if args.apply and args.dry_run:
+        raise SystemExit("--apply cannot be combined with --dry-run")
 
     source = os.path.basename(args.name) # ids must not depend on how the path was typed
     ingested_at = parse_as_of(args.as_of)
@@ -65,8 +70,6 @@ if __name__ == "__main__":
     if args.adjudicate:
         adjudicate(candidates)
 
-    log(candidates)
-
     if new_chunks and not args.dry_run:
         texts = list(new_chunks.values())
         documents.upsert(ids = list(new_chunks),
@@ -79,6 +82,13 @@ if __name__ == "__main__":
                                        "superseded_at": 0.0,
                                        "content_hash": content_hash(text)} for text in texts])
 
+        # superseded_by names an incoming chunk, so nothing can be retired until they are stored
+        if args.apply:
+            assert not args.dry_run
+            apply(candidates)
+
+    log(candidates) # last, so every line records whether the mutation actually happened
+
     dated = datetime.fromtimestamp(ingested_at, timezone.utc)
     nominated = [pair for pair in candidates if pair["nominated"]]
     verdicts = Counter(pair["verdict"] or "UNJUDGED" for pair in nominated)
@@ -89,3 +99,10 @@ if __name__ == "__main__":
     print(f"{len(nominated)} of {len(candidates)} pairs nominated, logged to {LOG_PATH}")
     for verdict, n in sorted(verdicts.items()):
         print(f"  {verdict}: {n}")
+
+    if args.apply:
+        applied = [pair for pair in candidates if pair["applied"]]
+        active = len(documents.get(where = {"status": "active"}, include = [])["ids"])
+        print(f"{len(applied)} records superseded, {active} still active")
+        for pair in applied:
+            print(f"  {pair['old_id']} -> {pair['new_id']}")

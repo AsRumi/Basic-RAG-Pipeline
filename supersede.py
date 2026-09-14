@@ -1,5 +1,5 @@
 """
-Nominates candidate pairs and asks the model to judge them. Changes nothing.
+Nominates candidate pairs, asks the model to judge them, and retires what they replace.
 """
 
 import argparse
@@ -17,6 +17,8 @@ SIMILARITY_FLOOR = 0.35
 RETRIES = 4
 BACKOFF = 8
 LOG_PATH = "supersession_log.jsonl"
+SUPERSEDING_VERDICTS = ("DUPLICATE", "CONTRADICTS")
+NOT_APPLIED = "--apply not given"
 
 VERDICT_SCHEMA = {"type": "object",
                   "properties": {"verdict": {"type": "string",
@@ -78,7 +80,10 @@ def nominate(chunks, source, ingested_at):
                           "older": "old" if old_metadata["ingested_at"] <= ingested_at else "new",
                           # byte-identical text needs no judgement, so it never reaches the model
                           "verdict": "DUPLICATE" if identical else None,
-                          "rationale": "identical text" if identical else None})
+                          "rationale": "identical text" if identical else None,
+                          "applied": False,
+                          "applied_at": 0.0,
+                          "skipped_reason": NOT_APPLIED})
 
     return pairs
 
@@ -122,6 +127,56 @@ def adjudicate(pairs):
 
     return pairs
 
+def skip_reason(pair):
+    if not pair["nominated"]:
+        return "below the similarity floor"
+    if pair["verdict"] not in SUPERSEDING_VERDICTS:
+        return f"verdict is {pair['verdict'] or 'UNJUDGED'}"
+    if pair["older"] != "old":
+        return "incoming chunk is older"
+    # the model called a table of contents a duplicate of the section it listed, so an
+    # unchanged-looking passage is only retired when the bytes actually match
+    if pair["verdict"] == "DUPLICATE" and pair["new_text"] != pair["old_text"]:
+        return "duplicate judged by model, not byte-identical"
+    return ""
+
+def apply(pairs):
+    targets = {}
+    for pair in pairs:
+        pair["skipped_reason"] = skip_reason(pair)
+        if not pair["skipped_reason"]:
+            targets.setdefault(pair["old_id"], []).append(pair)
+
+    if not targets:
+        return pairs
+
+    stored = documents.get(ids = list(targets))
+    metadatas = dict(zip(stored["ids"], stored["metadatas"]))
+    when = time.time()
+
+    for old_id, contenders in targets.items():
+        # one edit nominates the same stored chunk several times, and it is retired once
+        winner = max(contenders, key = lambda pair: pair["similarity"])
+        for loser in contenders:
+            if loser is not winner:
+                loser["skipped_reason"] = f"{winner['new_id']} won this target at {winner['similarity']:.4f}"
+
+        old_metadata = metadatas.get(old_id)
+        if old_metadata is None:
+            winner["skipped_reason"] = "target not in the store"
+        elif old_metadata["status"] != "active":
+            winner["skipped_reason"] = "target already superseded"
+        else:
+            documents.update(ids = [old_id],
+                             metadatas = [{**old_metadata,
+                                           "status": "superseded",
+                                           "superseded_by": winner["new_id"],
+                                           "superseded_at": when}])
+            winner["applied"] = True
+            winner["applied_at"] = when
+
+    return pairs
+
 def log(pairs):
     with open(LOG_PATH, "a", encoding = "utf-8") as f:
         for pair in pairs:
@@ -158,9 +213,14 @@ if __name__ == "__main__":
         print(f"    old: {preview(pair['old_text'])}")
         if pair["rationale"]:
             print(f"    why: {preview(pair['rationale'], 100)}")
+        if pair.get("applied"):
+            print(f"    APPLIED: {pair['old_id']} superseded by {pair['new_id']}")
+        elif pair.get("skipped_reason"):
+            print(f"    not applied: {pair['skipped_reason']}")
         print()
 
     counts = Counter(pair["verdict"] or "UNJUDGED" for pair in shown)
-    print(f"{len(shown)} shown of {len(pairs)} logged")
+    applied = sum(1 for pair in shown if pair.get("applied"))
+    print(f"{len(shown)} shown of {len(pairs)} logged, {applied} applied")
     for verdict, n in counts.most_common():
         print(f"  {verdict}: {n}")
