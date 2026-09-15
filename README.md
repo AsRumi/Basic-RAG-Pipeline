@@ -1,6 +1,12 @@
 <h1 align = "center"> RAG Pipeline, From Scratch </h1>
 
-A complete Retrieval-Augmented Generation pipeline built from the ground up. Every component is hand-written and understood, no black-box framework abstractions.
+A complete Retrieval-Augmented Generation pipeline built from the ground up, extended into a **vector store that maintains itself**. Every component is hand-written and understood, no black-box framework abstractions.
+
+When a newer document contradicts or duplicates something already stored, the older record is retired automatically. Nothing is ever deleted — records are tombstoned, and the retriever only ever sees the active ones.
+
+> **v1**, the basic pipeline without supersession, is preserved on the `v1-stable` branch. `git checkout v1-stable` for that version.
+>
+> **[GUIDE.md](GUIDE.md)** is a narrative walkthrough of everything v2 changed and why, including the measurements behind each decision and the two conclusions that turned out to be wrong. Read that if you want the reasoning rather than the reference.
 
 ---
 
@@ -41,7 +47,7 @@ This project uses `all-MiniLM-L6-v2` from `sentence-transformers` as the embeddi
 
 Embeddings are stored in a **vector database** - a database optimized for similarity search rather than exact lookup. Instead of scanning all vectors at query time, vector stores use **ANN (Approximate Nearest Neighbor)** search, where similarity between vectors is precomputed at index time to avoid recalculating cosine similarity across the entire database on every query.
 
-This project uses **ChromaDB** as the vector store.
+This project uses **ChromaDB**, persisted to disk in `chroma_db/`. The collection is explicitly configured for **cosine** space, and startup fails loudly if an existing store was built on a different metric — the metric cannot be changed in place, and a store on the wrong one would otherwise be used silently.
 
 ### Chunking
 
@@ -53,6 +59,8 @@ Chunks are overlapped at their boundaries so that information spanning two adjac
 2. **Sentence-Aware Chunking**: splits only at sentence boundaries, preserving grammatical units.
 3. **Recursive Chunking**: splits on a hierarchy of separators (paragraphs -> sentences -> words), falling back to finer splits only when necessary. This is the strategy used in this project, via LangChain's `RecursiveCharacterTextSplitter`.
 
+Chunks are 800 characters with 150 characters of overlap. **Changing either value invalidates the entire store**, because stored chunks were split with whatever settings were in force when they were ingested; a change means re-ingesting everything.
+
 ### Retrieval
 
 At query time, the query is embedded and the top-k most similar chunks are retrieved from the vector store using cosine similarity. Choosing k involves a tradeoff; too few chunks risks missing relevant context, too many introduces noise.
@@ -63,6 +71,8 @@ At query time, the query is embedded and the top-k most similar chunks are retri
 2. **Redundancy**: overlapping chunks can cause the same information to appear multiple times in the top-k results.
 3. **Wrong chunk winning**: a chunk can score highly due to surface-level similarity without actually answering the question.
 
+Retrieval is filtered to `status: "active"`, so superseded records remain in the store but can never reach the model.
+
 ### Reranking
 
 A **reranker** addresses these failure modes. It is a cross-encoder transformer trained to answer: _"Given this question, how well does this chunk answer it?"_ Unlike the bi-encoder used for retrieval (which embeds query and chunks independently), a cross-encoder sees the query and chunk together, allowing it to reason about their relationship with full attention.
@@ -72,7 +82,7 @@ The reranker is slower and cannot scale to millions of documents, so the pipelin
 1. **Top-k retrieval (bi-encoder)**: fast, runs over the full index, returns a candidate set.
 2. **Reranker (cross-encoder)**: slow, runs only over the candidate set, reorders by true relevance.
 
-This project uses `cross-encoder/ms-marco-MiniLM-L-6-v2` for reranking.
+This project uses `cross-encoder/ms-marco-MiniLM-L-6-v2` for reranking. Note that its scores are **signed logits** ranging roughly −11 to +11, not normalised scores — anything that weights them must be additive, since multiplying a negative score by a factor below 1 *improves* its rank.
 
 ### Generation and Grounding
 
@@ -86,7 +96,7 @@ Grounding solves three problems: it enforces **specificity** (the document knows
 
 If the retrieved context does not contain the answer, the model is instructed to say so rather than fabricate a response.
 
-This project uses **Gemini 2.5 Flash-Lite** via the `google-genai` SDK for generation.
+This project uses **Gemini 3.5 Flash-Lite** via the `google-genai` SDK for generation.
 
 ---
 
@@ -101,19 +111,67 @@ Not every query needs retrieval. Four strategies exist for deciding when to invo
 
 ---
 
+## Keeping the Store Current
+
+Grounding fixes staleness only if the store itself is current. It usually is not. Ingest a revised manual and you now hold both versions; both score highly against the same questions, both get retrieved, and the model receives instructions that contradict each other.
+
+### Similarity nominates, a model adjudicates
+
+The tempting fix is to treat a high similarity score as evidence of duplication. Measured on this project's own corpus, that does not work at all:
+
+| Pair | Cosine similarity |
+|---|---|
+| Byte-identical chunks | 1.0000 |
+| A chunk edited into a flat contradiction | 0.9966 |
+
+The gap between "nothing changed" and "actively wrong" is **0.0034**. No threshold separates them, and the same blindness applies to negation — "X is thread-safe" and "X is not thread-safe" embed almost identically.
+
+So the work splits in two. Cosine similarity answers *are these about the same thing?*, which it does well, and nominates the top three candidates per incoming chunk by rank. A language model then answers *do they disagree?*, returning one of four verdicts under a JSON schema:
+
+| Verdict | Meaning | Effect |
+| --- | --- | --- |
+| `DUPLICATE` | The later passage says the same thing | Older record retired, **only if the text matches exactly** |
+| `CONTRADICTS` | They cannot both be true or both be followed | Older record retired |
+| `REFINES` | The earlier passage is still true, the later is more precise | Both stay active |
+| `INDEPENDENT` | Different subjects | Both stay active |
+
+Byte-identical text never reaches the model — it is settled for free by comparing content hashes.
+
+### The tombstone model
+
+A retired record keeps its text and its embedding. Three metadata fields change: `status` becomes `superseded`, `superseded_by` records the id of the chunk that replaced it, and `superseded_at` records when. **Nothing is ever deleted.** An automated system retiring knowledge on a model's judgment will sometimes be wrong, and the whole design rests on that being recoverable.
+
+Chunk ids are **content-addressed** — the source filename plus a hash of the chunk text — rather than positional. An id names a specific piece of text permanently, and re-ingesting a document skips every chunk that did not change, so cost tracks edits rather than document size.
+
+### The audit trail
+
+Every pair ever considered is appended to `supersession_log.jsonl`: both passages, the similarity, the verdict, the model's quoted reasoning, whether it was applied, and if not, why not. The log is also the rollback path, which is why it is tracked in git rather than ignored.
+
+`--apply` is opt-in and off by default. Run an ingest without it to see what *would* happen before anything changes.
+
+---
+
 ## Project Structure
 
 ```
-rag-project/
-├── document.txt          # Source document
-├── embeddings.py             # Embed sentences, compute cosine similarity
-├── vector_store.py           # ChromaDB setup
-├── chunker.py                # Fixed-size and recursive chunking
-├── ingest.py                 # Chunk -> embed -> store pipeline
-├── retriever.py              # retrieve() and retrieve_and_rerank()
+Basic-RAG-Pipeline/
+├── store.py                  # Embedding model, Chroma client, collection. Guards cosine space.
+├── llm.py                    # Shared Gemini client and model id
+├── ingest.py                 # Chunk -> embed -> store, with --as-of, --dry-run, --apply
+├── supersede.py              # nominate(), judge(), adjudicate(), apply(), the log and its report
+├── retriever.py              # retrieve() filtered to active, and retrieve_and_rerank()
 ├── query.py                  # build_prompt(), ask(), interactive loop
+├── admin.py                  # --list, --stats, --rollback, --reapply
+├── evaluate.py               # Scores the adjudicator against known-answer pairs
+├── tests/
+│   └── contradictions.jsonl  # Ten hand-authored pairs with expected verdicts
+├── chroma_db/                # Persistent vector store (gitignored, rebuilt by ingesting)
+├── supersession_log.jsonl    # Append-only audit trail and rollback path
+├── GUIDE.md                  # Narrative walkthrough of the v2 design
 └── requirements.txt
 ```
+
+`chunker.py`, `embeddings.py` and `vector_store.py` are scratch files from the original learning exercise and are **not** on the live path.
 
 ---
 
@@ -122,28 +180,64 @@ rag-project/
 | Component    | Tool                                         |
 | ------------ | -------------------------------------------- |
 | Embeddings   | `sentence-transformers` / `all-MiniLM-L6-v2` |
-| Vector Store | ChromaDB (in-memory)                         |
+| Vector Store | ChromaDB (persistent, cosine space)          |
 | Chunking     | LangChain `RecursiveCharacterTextSplitter`   |
 | Reranking    | `cross-encoder/ms-marco-MiniLM-L-6-v2`       |
 | Generation   | Gemini 3.5 Flash-Lite (`google-genai`)       |
+| Adjudication | Gemini 3.5 Flash-Lite, JSON schema, temp 0   |
 
 ---
 
 ## Running the Pipeline
 
-Basic RAG Pipeline cached at v1-stable.
-`git checkout v1-stable` to migrate to Basic RAG Pipeline.
-
 1. Clone the repo and activate your virtual environment.
 2. Install dependencies: `pip install -r requirements.txt`
 3. Add your Gemini API key to a `.env` file: `GEMINI_API_KEY=your_key_here`
-4. Run ingestion to chunk, embed, and index the document:
-   ```
-   python ingest.py --name documentName.txt
-   ```
-5. Start the interactive query loop:
-   ```
-   python query.py
-   ```
 
----
+`chroma_db/` is gitignored and never travels with the repo, so a fresh clone starts with no store. Build one by ingesting:
+
+```
+python ingest.py --name document.txt --as-of 2024-03-01 --no-adjudicate
+```
+
+`--as-of` sets the date the content is from, which is what decides who is older when two records conflict. It defaults to now. `--no-adjudicate` skips the model calls, which is what you want while populating an empty store.
+
+Then ask it something:
+
+```
+python query.py
+```
+
+### Ingesting a revision
+
+```
+python ingest.py --name manual-v2.txt --dry-run       # judge, store nothing
+python ingest.py --name manual-v2.txt                 # store, judge, change nothing
+python ingest.py --name manual-v2.txt --apply         # store, judge, retire what it replaces
+```
+
+`--apply` refuses to run alongside `--dry-run`.
+
+### Inspecting and undoing
+
+```
+python supersede.py                    # report the log
+python supersede.py --all              # include pairs below the similarity floor
+python admin.py --stats                # counts by source and status
+python admin.py --list                 # what is retired and what replaced it
+python admin.py --rollback             # replay the log backwards, restoring records
+python admin.py --reapply              # replay it forwards again
+```
+
+Both `--rollback` and `--reapply` accept `--since YYYY-MM-DD` and are idempotent. A rollback cannot be undone by re-running the ingest — the chunks are already stored, so nothing gets nominated — which is why `--reapply` exists.
+
+### Evaluation
+
+```
+python evaluate.py
+python evaluate.py --verbose
+```
+
+Scores the adjudicator against ten hand-authored pairs in `tests/contradictions.jsonl` with known correct verdicts, including a refinement deliberately built to look like a contradiction and a negation pair. Exits non-zero on any regression. One case is recorded as a known wrong answer so that it cannot mask a real one.
+
+Run this after any change to the adjudicator prompt, the similarity floor, or the number of candidates per chunk.

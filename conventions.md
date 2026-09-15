@@ -2,13 +2,15 @@
 
 **Project:** Basic-RAG-Pipeline (branch `main`; v1 preserved at `v1-stable`)
 **Last updated:** 2026-09-14
-**Last commit:** `c97535a LLM module added. LLM Adjudicator improved.` — Phase 4 built and verified, not yet committed.
+**Last commit:** `e4f827a Phase 4 done.` — v2 is feature-complete. The §24.1 closing work (evaluation set, `GUIDE.md`, README) is built and verified but not yet committed.
 
 ---
 
 # START HERE
 
-Read this section, then §25 (Phase 4 implementation record), then §20 (how to talk to the user). Everything else is reference you can consult as needed. **The user wants this project finished quickly — do not re-derive settled decisions or re-run settled experiments.**
+Read this section, then §25 and §26 (what Phase 4 does and how v2 was closed out), then §20 (how to talk to the user). Everything else is reference you can consult as needed. **The user wants this project finished quickly — do not re-derive settled decisions or re-run settled experiments.**
+
+**v2 is feature-complete.** Nothing in §24.1 remains. Do not start anything in §24.3 without being asked.
 
 ## What this project is
 
@@ -34,6 +36,7 @@ What remains is in §24: the evaluation set, the learning guide, and a `README.m
 | `ingest.py` | Chunk, embed, write, with `--as-of`, `--dry-run`, `--no-adjudicate`, `--apply` |
 | `supersede.py` | `nominate()`, `judge()`, `adjudicate()`, `apply()`, the log, and the report |
 | `admin.py` | `--list`, `--stats`, `--rollback`, `--reapply`. The audit and undo surface. |
+| `evaluate.py` | Scores `judge()` against `tests/contradictions.jsonl`. Exits non-zero on regression. |
 | `retriever.py` | Vector search filtered to `status: "active"`, then cross-encoder re-rank |
 | `query.py` | Prompt, Gemini call, REPL that prints sources |
 
@@ -1057,9 +1060,9 @@ Ordered by what the user gets for the effort.
 ### 24.1 Required to call the feature finished
 
 1. ~~**Phase 4 + `admin.py` rollback** (§23).~~ **Done 2026-09-14, see §25.**
-2. **The evaluation set (§11).** Ten hand-written pairs with expected verdicts in `tests/contradictions.jsonl`, including the `createTimeSlots` contradiction, a refinement built to look like a contradiction, and a negation pair. Four of these already exist as the five clone edits and their known answers — write them down properly rather than re-deriving them. Without this, a regression in the adjudicator prompt is invisible until it has already damaged the store.
-3. **The learning guide the user asked for.** A walkthrough of everything v2 changed and why, written for someone learning the material rather than as a reference. This is why prose was stripped out of the source files (§15) — the explanation was always meant to live somewhere it can be read in order. Draw on §17 through §22, which contain the real measurements and the two corrections.
-4. **Rewrite `README.md`.** It still describes v1 and has known drift (§2). It should cover supersession, the tombstone model, and the new commands.
+2. ~~**The evaluation set (§11).**~~ **Done 2026-09-14.** `tests/contradictions.jsonl` holds ten pairs, scored by `evaluate.py`. See §26.
+3. ~~**The learning guide the user asked for.**~~ **Done 2026-09-14** — `GUIDE.md`. See §26.
+4. ~~**Rewrite `README.md`.**~~ **Done 2026-09-14.** See §26.
 
 ### 24.2 Worth doing, not required
 
@@ -1147,3 +1150,41 @@ Temperature 0 is not determinism. This is the argument for the evaluation set in
 - **Same-source orphans (§23.8 item 2) are an accepted gap**, decided by the user rather than overlooked. A chunk deleted in v2 still lingers as `active` forever. It needs a set difference between two ingests of one source — no similarity search, no model call — and it is not built.
 - **The incoming-older path has never fired on real data.** All 36 pairs in both runs have the stored chunk as the older one. The guard was instead exercised directly: a synthetic backfill pair pointed at a real stored chunk applied nothing, reported `incoming chunk is older`, and left the record active. All nine `skip_reason()` branches were checked this way. The evaluation set in §24.1 should still include a genuine backfill document so the path runs end to end.
 - **`supersession_log.jsonl` is now tracked in git**, removed from `.gitignore` by the user before this work. That settles §23.8 item 1 and §16.5: the rollback path is under version control.
+
+---
+
+## 26. Closing out v2: evaluation set, guide, README (2026-09-14)
+
+The three items §24.1 listed after Phase 4. All are built; v2 is feature-complete.
+
+### 26.1 The evaluation set
+
+`tests/contradictions.jsonl`, ten pairs, run by `evaluate.py`. It calls `judge()` directly rather than going through nomination, so it tests the adjudicator prompt in isolation and touches neither the store nor the log. Exit code is non-zero if anything fails or errors.
+
+All three cases §11 demanded are present: the `createTimeSlots` contradiction, the background-thread refinement built to look exactly like it, and the thread-safety negation pair. Five more are lifted verbatim from the real v1 -> v2 diff, as §11 asked — the hand-edits are the ground truth, so they were transcribed rather than re-derived. The last two are a reformatted-but-unchanged specifications block (the only `DUPLICATE` that has to reach the model, since byte comparison cannot catch it) and the packing-list-against-specifications pair that §22.4 identified as the archetypal wasted call.
+
+**Current score: 9 pass, 1 known-wrong, 0 fail.**
+
+The known-wrong is the isopropyl case, carried in the file as `"known": "REFINES"`. A case that always fails trains people to ignore failures, so it is recorded explicitly and reported separately from real regressions. If it ever starts answering `CONTRADICTS`, that shows up too, because the outcome stops matching either field.
+
+Run this after touching the prompt, `SIMILARITY_FLOOR`, or `CANDIDATES_PER_CHUNK`. Note that it costs ten model calls and the per-minute quota applies; `judge()`'s backoff covers it.
+
+### 26.2 The learning guide
+
+`GUIDE.md`, twelve sections, written to be read start to finish rather than consulted. It is where the prose that §15 stripped out of the source files now lives.
+
+It follows the reasoning in the order it actually happened, including the parts that were wrong: the age-multiplier proposal and why multiplying signed logits breaks, the 0.0034 measurement that killed thresholding, the 0.75 threshold that looked fine on a one-edit clone and dropped the two most important edits on the five-edit one, topic blending as the real cause rather than the boundary-position explanation first offered, and the table-of-contents verdict that produced the byte-identical guard. The corrections are left in deliberately — §19 correcting §17 and §18 is one of the more instructive things in this project's history, and a guide that presents the design as if it arrived fully formed would teach the wrong lesson.
+
+It also explains why the byte-identical guard is not the thresholding mistake wearing a disguise: contradiction is a claim about meaning and needs the model, "nothing changed" is a claim about bytes and `==` is exact, free, and never hallucinates.
+
+### 26.3 README
+
+Rewritten. Both drift items from §2 are fixed: the stack table said "ChromaDB (in-memory)" against a `PersistentClient`, and the project structure block called the root `rag-project/` and omitted `chroma_db/`. A third error was found while rewriting — the generation section said **Gemini 2.5 Flash-Lite** while the stack table said 3.5 and `llm.py` says `gemini-3.5-flash-lite`. Now consistent.
+
+The v1 teaching material is kept intact, since it is good and the "from scratch" framing still holds. Added: a section on keeping the store current, the four verdicts and what each does, the tombstone model, content-addressed ids, the audit trail, the full command set, and the evaluation instructions. The re-rank section now warns that the scores are signed logits, which is the §4.4 trap and the most expensive thing for a newcomer to get wrong.
+
+`README.md` links `GUIDE.md`. Neither links this file, which is gitignored.
+
+### 26.4 What is left
+
+Nothing required. §24.2 and §24.3 stand as written: batching and verdict caching if cost ever becomes real, the scratch files still worth quarantining, the authority weight parked but not cancelled, and claim-level identity deferred until collateral damage actually appears in an applied log.
