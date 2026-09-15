@@ -2,7 +2,7 @@
 
 A complete Retrieval-Augmented Generation pipeline built from the ground up, extended into a **vector store that maintains itself**. Every component is hand-written and understood, no black-box framework abstractions.
 
-When a newer document contradicts or duplicates something already stored, the older record is retired automatically. Nothing is ever deleted — records are tombstoned, and the retriever only ever sees the active ones.
+When a newer document contradicts or duplicates something already stored, the older record is retired automatically. Nothing is ever deleted; records are tombstoned, and the retriever only ever sees the active ones.
 
 > **v1**, the basic pipeline without supersession, is preserved on the `v1-stable` branch. `git checkout v1-stable` for that version.
 >
@@ -47,7 +47,7 @@ This project uses `all-MiniLM-L6-v2` from `sentence-transformers` as the embeddi
 
 Embeddings are stored in a **vector database** - a database optimized for similarity search rather than exact lookup. Instead of scanning all vectors at query time, vector stores use **ANN (Approximate Nearest Neighbor)** search, where similarity between vectors is precomputed at index time to avoid recalculating cosine similarity across the entire database on every query.
 
-This project uses **ChromaDB**, persisted to disk in `chroma_db/`. The collection is explicitly configured for **cosine** space, and startup fails loudly if an existing store was built on a different metric — the metric cannot be changed in place, and a store on the wrong one would otherwise be used silently.
+This project uses **ChromaDB**, persisted to disk in `chroma_db/`. The collection is explicitly configured for **cosine** space, and startup fails loudly if an existing store was built on a different metric. The metric cannot be changed in place, and a store on the wrong one would otherwise be used silently.
 
 ### Chunking
 
@@ -82,7 +82,7 @@ The reranker is slower and cannot scale to millions of documents, so the pipelin
 1. **Top-k retrieval (bi-encoder)**: fast, runs over the full index, returns a candidate set.
 2. **Reranker (cross-encoder)**: slow, runs only over the candidate set, reorders by true relevance.
 
-This project uses `cross-encoder/ms-marco-MiniLM-L-6-v2` for reranking. Note that its scores are **signed logits** ranging roughly −11 to +11, not normalised scores — anything that weights them must be additive, since multiplying a negative score by a factor below 1 *improves* its rank.
+This project uses `cross-encoder/ms-marco-MiniLM-L-6-v2` for reranking. Its scores are **signed logits** ranging roughly −11 to +11, not normalised scores, so anything that weights them must be additive: multiplying a negative score by a factor below 1 *improves* its rank.
 
 ### Generation and Grounding
 
@@ -124,7 +124,7 @@ The tempting fix is to treat a high similarity score as evidence of duplication.
 | Byte-identical chunks | 1.0000 |
 | A chunk edited into a flat contradiction | 0.9966 |
 
-The gap between "nothing changed" and "actively wrong" is **0.0034**. No threshold separates them, and the same blindness applies to negation — "X is thread-safe" and "X is not thread-safe" embed almost identically.
+The gap between "nothing changed" and "actively wrong" is **0.0034**. No threshold separates them, and the same blindness applies to negation: "X is thread-safe" and "X is not thread-safe" embed almost identically.
 
 So the work splits in two. Cosine similarity answers *are these about the same thing?*, which it does well, and nominates the top three candidates per incoming chunk by rank. A language model then answers *do they disagree?*, returning one of four verdicts under a JSON schema:
 
@@ -135,13 +135,13 @@ So the work splits in two. Cosine similarity answers *are these about the same t
 | `REFINES` | The earlier passage is still true, the later is more precise | Both stay active |
 | `INDEPENDENT` | Different subjects | Both stay active |
 
-Byte-identical text never reaches the model — it is settled for free by comparing content hashes.
+Byte-identical text never reaches the model; it is settled for free by comparing content hashes.
 
 ### The tombstone model
 
 A retired record keeps its text and its embedding. Three metadata fields change: `status` becomes `superseded`, `superseded_by` records the id of the chunk that replaced it, and `superseded_at` records when. **Nothing is ever deleted.** An automated system retiring knowledge on a model's judgment will sometimes be wrong, and the whole design rests on that being recoverable.
 
-Chunk ids are **content-addressed** — the source filename plus a hash of the chunk text — rather than positional. An id names a specific piece of text permanently, and re-ingesting a document skips every chunk that did not change, so cost tracks edits rather than document size.
+Chunk ids are **content-addressed** (the source filename plus a hash of the chunk text) rather than positional. An id names a specific piece of text permanently, and re-ingesting a document skips every chunk that did not change, so cost tracks edits rather than document size.
 
 ### The audit trail
 
@@ -229,7 +229,7 @@ python admin.py --rollback             # replay the log backwards, restoring rec
 python admin.py --reapply              # replay it forwards again
 ```
 
-Both `--rollback` and `--reapply` accept `--since YYYY-MM-DD` and are idempotent. A rollback cannot be undone by re-running the ingest — the chunks are already stored, so nothing gets nominated — which is why `--reapply` exists.
+Both `--rollback` and `--reapply` accept `--since YYYY-MM-DD` and are idempotent. A rollback cannot be undone by re-running the ingest, since the chunks are already stored and nothing gets nominated, which is why `--reapply` exists.
 
 ### Evaluation
 

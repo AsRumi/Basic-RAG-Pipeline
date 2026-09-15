@@ -1,0 +1,361 @@
+================================================================================
+            KILNMASTER PRO-2500 HEAVY-DUTY CERAMIC & WOOD FIRED KILN
+                       OPERATIONAL MANUAL & SAFETY GUIDE
+================================================================================
+Document Reference: UM-KM2500-2026-REV2
+Publication Date: September 2026
+Equipment Model: KilnMaster Pro-2500 (Refractory Brick Architecture)
+Manufacturer: Stone & Fire Artisan Kilnworks Ltd.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+ 1. PHYSICAL SPECIFICATIONS & MASONRY STRUCTURAL DATA
+    1.1 Chamber Volume & Exterior Dimensions
+    1.2 Refractory Brick Composition & Insulation Ratings
+    1.3 Thermal Capacitance & Peak Firing Tolerances
+    1.4 Flue Stack & Chimney Draft Specifications
+ 2. SAFETY WARNINGS, THERMAL HAZARDS & REGULATORY COMPLIANCE
+    2.1 Safety Alert Conventions
+    2.2 Extreme Heat & Burn Prevention Protocols
+    2.3 Toxic Fume Ventilation & Airway Protection
+    2.4 Fire Suppression & Combustible Clearance Zones
+ 3. UNPACKING, SITE PREPARATION & INITIAL MASONRY ASSEMBLY
+    3.1 Foundation Pad & Structural Weight Bearing Requirements
+    3.2 Mortar Curing & Brick Stacking Procedures
+    3.3 Damper Gate Installation & Chimney Coupling
+    3.4 Initial Pre-Heat Curing Schedule (Water-Smoking Phase)
+ 4. KILN ARCHITECTURE & MECHANICAL CONTROLS
+    4.1 Main Combustion Chamber & Firebox Grate
+    4.2 High-Alumina Arch Ceiling & Heat Retention Dome
+    4.3 Manual Sliding Flue Damper & Air Intake Vents
+    4.4 Spyholes & Pyrometric Cone Viewing Ports
+ 5. FIRING MANUAL & THERMAL CONTROL PROCEDURES
+    5.1 Firewood Fuel Selection & Moisture Requirements
+    5.2 Low-Temperature Pre-Heating & Bisque Firing Steps
+    5.3 High-Temperature Glaze Firing Workflows (Cone 10 / 1300°C)
+    5.4 Reduction Atmospheric Control via Flue Adjustment
+    5.5 Natural Cooling Cycle & Unloading Protocols
+ 6. PREVENTIVE MAINTENANCE SCHEDULE & REPAIR GUIDELINES
+    6.1 Pre-Firing Brick & Mortar Inspection
+    6.2 Post-Firing Ash Extraction & Grate Cleaning
+    6.3 Refractory Patching & Cracking Repair
+    6.4 Chimney Soot Sweeping & Flue Clearance
+ 7. TROUBLESHOOTING GUIDE & FIRING DEFECT ANALYSIS
+    7.1 Temperature Stagnation & Draft Starvation
+    7.2 Glaze Blistering, Pin-holing, and Thermal Shock Faults
+    7.3 Structural Brick Spalling & Crack Diagnostics
+ 8. REPLACEMENT PARTS & MASONRY SUPPLIES DIRECTORY
+    8.1 Consumable Refractory Materials
+    8.2 Hardware Fasteners & Cast Iron Fittings
+ 9. WARRANTY, TECHNICAL SUPPORT & ARTISAN ADVISORY CONTACTS
+
+
+================================================================================
+SECTION 1: PHYSICAL SPECIFICATIONS & MASONRY STRUCTURAL DATA
+================================================================================
+
+1.1 CHAMBER VOLUME & EXTERIOR DIMENSIONS
+--------------------------------------------------------------------------------
+Overall External Dimensions (L x W x H):  2800 mm x 1650 mm x 2400 mm
+Internal Firing Chamber Volume:          1,250 Liters (44.1 cu. ft.)
+Usable Stacking Floor Area:              1.8 Square Meters
+Chimney Stack Height (above arch dome):  3,500 mm
+Net Dry Weight (Assembled Masonry):     3,120 kg (6,878 lbs)
+Combustion Chamber Door Opening:         750 mm x 900 mm (Arched Top)
+
+1.2 REFRACTORY BRICK COMPOSITION & INSULATION RATINGS
+--------------------------------------------------------------------------------
+Inner Hot-Face Layer:            K-26 High-Alumina Firebrick (2600°F / 1426°C rating)
+Outer Insulating Layer:          K-23 Lightweight Insulating Firebrick (IFB)
+Sub-Base Insulation:             Calcium Silicate Board (100 mm thickness)
+Mortar Specification:            High-Alumina Heat-Set Refractory Mortar
+Arch Steel Framework:            Heavy-Gauge Angle Iron with Turnbuckle Tie-Rods
+
+1.3 THERMAL CAPACITANCE & PEAK FIRING TOLERANCES
+--------------------------------------------------------------------------------
+Maximum Operating Temperature:   1350°C (2462°F / Pyrometric Cone 12)
+Recommended Continuous Temp:     1280°C to 1320°C (Cone 10 to Cone 11)
+Thermal Shock Limit:             Cooling rate must not exceed 100°C per hour above 600°C
+Heat Retention Period:           24 to 36 hours post-stoking cutoff
+
+1.4 FLUE STACK & CHIMNEY DRAFT SPECIFICATIONS
+--------------------------------------------------------------------------------
+Flue Cross-Sectional Area:       300 mm x 300 mm (Square Profile)
+Draft Mechanism:                 Natural Passive Thermal Convection (Up-Draft System)
+Damper Construction:             Heavy Silicon Carbide Plate (25 mm thickness)
+Maximum Air Throughput Velocity:  4.2 meters per second at 1000°C chamber temp
+
+
+================================================================================
+SECTION 2: SAFETY WARNINGS, THERMAL HAZARDS & REGULATORY COMPLIANCE
+================================================================================
+
+2.1 SAFETY ALERT CONVENTIONS
+--------------------------------------------------------------------------------
+[DANGER]:  Indicates an imminently hazardous condition involving extreme temperatures 
+           or structural collapse which WILL result in severe burns or death.
+[WARNING]: Indicates a situation which COULD result in serious injury, carbon 
+           monoxide poisoning, or structural fire.
+[CAUTION]: Indicates a condition that may cause physical burns, equipment damage, 
+           or ruined ceramic wares.
+[NOTICE]:  Critical advice regarding wood fuel selection, draft adjustment, and 
+           refractory longevity.
+
+2.2 EXTREME HEAT & BURN PREVENTION PROTOCOLS
+--------------------------------------------------------------------------------
+[DANGER] EXTREME SURFACE TEMPERATURE HAZARD
+During peak firing, external brick surfaces exceed 120°C (248°F) and interior 
+chambers reach up to 1350°C (2462°F). Direct contact will cause catastrophic burns.
+
+1. Operators MUST wear heat-resistant leather stoking aprons, long-cuffed heavy 
+   Kevlar/Nomex insulated gloves rated for 1000°C minimum, and full-face thermal shields.
+2. NEVER look directly into open spyholes or stoke holes without wearing shade 3 
+   or shade 5 infrared-blocking safety goggles to prevent retinal burn.
+3. Establish a 2.5-meter safety perimeter around the kiln structure during firing operations.
+4. Keep all unauthorized personnel, children, and pets clear of the firing site.
+
+2.3 TOXIC FUME VENTILATION & AIRWAY PROTECTION
+--------------------------------------------------------------------------------
+[WARNING] COMBUSTION GAS & GLAZE OFF-GASSING HAZARD
+Burning wood and vitrifying ceramic glazes release toxic gases, including Carbon 
+Monoxide (CO), Sulfur Dioxide (SO2), Fluorine gas, and heavy metal vapors (lead, cobalt).
+
+1. The KilnMaster Pro-2500 MUST be installed in an open-air shed or a dedicated 
+   fireproof facility equipped with high-volume canopy exhaust hoods.
+2. Operators MUST wear dual-filter respirators equipped with organic vapor and P100 
+   particulate cartridges during reduction firing and fuel stoking.
+3. Install dual industrial Carbon Monoxide alarms inside the firing building at a 
+   distance of 3 meters from the kiln base.
+
+2.4 FIRE SUPPRESSION & COMBUSTIBLE CLEARANCE ZONES
+--------------------------------------------------------------------------------
+- Maintain a minimum of 2.0 meters clearance between the kiln walls and any 
+  combustible timber walls, wooden roofs, or stored firewood stacks.
+- Maintain a minimum of 4.0 meters vertical clearance above the top of the chimney stack.
+- Keep two 10kg Class A/B/C dry chemical fire extinguishers and a 50-liter sand 
+  bucket within 5 meters of the stoking pit at all times.
+
+
+================================================================================
+SECTION 3: UNPACKING, SITE PREPARATION & INITIAL MASONRY ASSEMBLY
+================================================================================
+
+3.1 FOUNDATION PAD & STRUCTURAL WEIGHT BEARING REQUIREMENTS
+--------------------------------------------------------------------------------
+- Sub-floor Spec: Reinforced poured concrete pad, minimum 250 mm thickness.
+- Load Capacity: Must support at least 5,000 kg (11,000 lbs) point load without settling.
+- Drainage: Sloped slightly (1% gradient away from the kiln mouth) to prevent water 
+  pooling under the base bricks.
+
+3.2 MORTAR CURING & BRICK STACKING PROCEDURES
+--------------------------------------------------------------------------------
+1. Lay down the calcium silicate sub-base insulation boards on the level concrete pad.
+2. Mix high-alumina refractory mortar with clean water to a smooth butter-like consistency.
+3. Lay the first course of high-density firebricks for the hearth floor, using thin 
+   1.5 mm mortar joints.
+4. Build sidewalls upward in alternating running-bond courses.
+5. Set the wooden arch formwork into position and lay the key-arch roof firebricks.
+6. Drive the center key-bricks into place using a wooden mallet; tighten metal frame tie-rods.
+
+3.3 DAMPER GATE INSTALLATION & CHIMNEY COUPLING
+--------------------------------------------------------------------------------
+1. Mount the cast-iron damper frame guide channels onto the rear flue assembly.
+2. Slide the silicon carbide damper plate into the guide channel slot, ensuring 
+   smooth manual sliding movement.
+3. Stack the chimney brick flue upward to the designated height, anchoring the 
+   stack to external structural supports every 1.5 meters using steel straps.
+
+3.4 INITIAL PRE-HEAT CURING SCHEDULE (WATER-SMOKING PHASE)
+--------------------------------------------------------------------------------
+[NOTICE] DO NOT FIRE THE KILN TO HIGH TEMPERATURES IMMEDIATELY AFTER ASSEMBLY.
+Newly laid refractory mortar contains residual moisture that must be slowly evaporated.
+
+Phase 1 (Day 1): Light a small kindling fire in the firebox; keep chamber temperature 
+                 below 100°C (212°F) for 12 hours with damper 100% open.
+Phase 2 (Day 2): Increase heat to 250°C (482°F) over 8 hours; maintain for 6 hours.
+Phase 3 (Day 3): Ramp heat slowly to 600°C (1112°F) over 10 hours, then allow to cool naturally.
+
+
+================================================================================
+SECTION 4: KILN ARCHITECTURE & MECHANICAL CONTROLS
+================================================================================
+
+4.1 MAIN COMBUSTION CHAMBER & FIREBOX GRATE
+--------------------------------------------------------------------------------
+The lower firebox features cast-iron heavy-duty grate bars that hold burning timber off 
+the ash floor. Primary combustion air enters from under the grate bars, drawing oxygen upward 
+through the fuel bed into the main chamber.
+
+4.2 HIGH-ALUMINA ARCH CEILING & HEAT RETENTION DOME
+--------------------------------------------------------------------------------
+The sprung arch ceiling is calculated at a 60-degree radius to reflect radiant heat down 
+onto the ceramic ware shelves while directing combustion flame paths toward the rear 
+down-draft bagwall before entering the exit flue.
+
+4.3 MANUAL SLIDING FLUE DAMPER & AIR INTAKE VENTS
+--------------------------------------------------------------------------------
+- Primary Air Dampers: Cast-iron hinged doors located at the front of the firebox pit.
+- Secondary Air Ports: Adjustable sliding brick covers located above the main firedoor.
+- Flue Damper Plate: Silicon carbide slab at the chimney base used to regulate stack draft.
+
+4.4 SPYHOLES & PYROMETRIC CONE VIEWING PORTS
+--------------------------------------------------------------------------------
+Three tapered ceramic spyhole ports are built into the front door wall (Top, Middle, Bottom). 
+These allow the artisan to visually inspect pyrometric cone bending and glaze melting behavior 
+inside the chamber during firing.
+
+
+================================================================================
+SECTION 5: FIRING MANUAL & THERMAL CONTROL PROCEDURES
+================================================================================
+
+5.1 FIREWOOD FUEL SELECTION & MOISTURE REQUIREMENTS
+--------------------------------------------------------------------------------
+- Wood Type: Hardwoods (Oak, Maple, Hickory) for sustained heat; Softwoods (Pine, Spruce) 
+  for long-flame glaze effects and rapid temperature spikes.
+- Moisture Content: Moisture levels MUST be between 12% and 18% (measured via pin meter).
+- Dimensions: Split logs, 500 mm to 700 mm length, 50 mm to 100 mm thickness.
+- DO NOT USE: Pressure-treated wood, painted timber, plywood, or salt-driftwood.
+
+5.2 LOW-TEMPERATURE PRE-HEATING & BISQUE FIRING STEPS
+--------------------------------------------------------------------------------
+1. Load greenware pots on silicon carbide shelves using 3-point stilt posts.
+2. Brick up the main chamber doorway leaving a 50 mm gap at the top for moisture exhaust.
+3. Build a small wood fire in the firebox pit using thin softwood kindling.
+4. Maintain a slow temperature rise rate of 50°C per hour up to 500°C.
+5. Complete doorway brick sealing; seal gaps with a clay/sand mixture (wadding).
+6. Continue firing to 980°C (Cone 06) for bisque vitrification.
+
+5.3 HIGH-TEMPERATURE GLAZE FIRING WORKFLOWS (CONE 10 / 1300°C)
+--------------------------------------------------------------------------------
+1. After bisque cooling, load glazed ceramic wares with appropriate shelf-wash coating.
+2. Position pyrometric cone packs (Guide, Target, Guard cones) aligned with spyholes.
+3. Fire aggressively with dry hardwood, stoking every 10 to 15 minutes.
+4. Monitor rate of rise: Aim for 100°C per hour between 600°C and 1100°C.
+5. Reduce stoking intervals to every 5 minutes when approaching 1250°C.
+
+5.4 REDUCTION ATMOSPHERIC CONTROL VIA FLUE ADJUSTMENT
+--------------------------------------------------------------------------------
+To achieve rich copper-red and celadon glaze effects:
+1. Upon reaching 1000°C (Cone 011), push the main chimney damper in by 60%.
+2. Close primary air intake dampers to restrict oxygen supply to the firebox.
+3. Heavy flame will stream out of the upper spyhole (positive chamber pressure).
+4. Maintain smoky reduction atmosphere for 2 to 3 hours or until Target Cone bends.
+
+5.5 NATURAL COOLING CYCLE & UNLOADING PROTOCOLS
+--------------------------------------------------------------------------------
+1. When Target Cone 10 completely bends flat, execute final heavy stoke and close 
+   all damper ports, air vents, and stoke holes completely (passive soak).
+2. Allow kiln to cool sealed for a MINIMUM of 24 to 36 hours.
+3. DO NOT unbrick the main door until interior chamber temperature drops below 150°C.
+4. Opening the doorway above 200°C will cause severe thermal shock dunting (cracking) 
+   of ceramic pieces and damage to firebricks.
+
+
+================================================================================
+SECTION 6: PREVENTIVE MAINTENANCE SCHEDULE & REPAIR GUIDELINES
+================================================================================
+
+6.1 PRE-FIRING BRICK & MORTAR INSPECTION
+--------------------------------------------------------------------------------
+[ ] Inspect firebox arch for loose, shifting, or sagging bricks.
+[ ] Check floor bricks for glaze drips; scrape clean and re-apply alumina shelf wash.
+[ ] Verify chimney damper plate slides freely without binding inside channel.
+[ ] Clear ash build-up from under grate bars to ensure unimpeded air intake.
+
+6.2 POST-FIRING ASH EXTRACTION & GRATE CLEANING
+--------------------------------------------------------------------------------
+[ ] Wait 48 hours post-firing until ash pit is completely cold.
+[ ] Shovel out wood ash using a non-sparking aluminum shovel into a steel ash drum.
+[ ] Inspect cast-iron grate bars for severe warping, oxidation, or thermal sag.
+[ ] Spray down ash pit floor with fine water mist to settle toxic fly-ash dust.
+
+6.3 REFRACTORY PATCHING & CRACKING REPAIR
+--------------------------------------------------------------------------------
+- Minor hairline surface cracks (< 3 mm wide) are normal due to thermal expansion.
+- For wider cracks (> 5 mm): Mix 50% kaolin clay, 50% grog with water glass (sodium silicate).
+- Dampen target brick surface with water; press mixture firmly into crack using a putty knife.
+- Allow patch to dry for 24 hours prior to next thermal cycle.
+
+6.4 CHIMNEY SOOT SWEEPING & FLUE CLEARANCE
+--------------------------------------------------------------------------------
+[ ] Perform chimney sweep every 10 firings or every 6 months.
+[ ] Lower a wire flue brush down the chimney stack to dislodge creosote and fly-ash.
+[ ] Vacuum out dislodged debris from the rear collector box under the flue damper.
+
+
+================================================================================
+SECTION 7: TROUBLESHOOTING GUIDE & FIRING DEFECT ANALYSIS
+================================================================================
+
+7.1 TEMPERATURE STAGNATION & DRAFT STARVATION
+--------------------------------------------------------------------------------
+Symptom: Kiln temperature stalls between 1100°C and 1150°C and will not rise.
+  Possible Cause A: Wood fuel moisture content is too high (> 20%).
+    -> Solution: Switch immediately to split, kiln-dried softwood boards.
+  Possible Cause B: Ash pit is choked, blocking primary combustion air.
+    -> Solution: Carefully rake out accumulation under grate using long iron poker.
+  Possible Cause C: Flue damper is closed too far, choking natural draft.
+    -> Solution: Pull damper outward in 10 mm increments until draft roar resumes.
+
+7.2 GLAZE BLISTERING, PIN-HOLING, AND THERMAL SHOCK FAULTS
+--------------------------------------------------------------------------------
+Symptom: Glaze surfaces contain tiny bubbles, craters, or pin-holes.
+  -> Cause: Firing proceeded too quickly through the glaze-melting phase (1100°C - 1200°C).
+  -> Solution: Implement a 30-minute temperature hold (soak) at peak heat before shutdown.
+
+Symptom: Wares crack with sharp, clean ringing fracture lines (Dunting).
+  -> Cause: Kiln was opened while chamber temperature was above 200°C.
+  -> Solution: Allow longer natural cooling cycle; never force-cool with fans.
+
+7.3 STRUCTURAL BRICK SPALLING & CRACK DIAGNOSTICS
+--------------------------------------------------------------------------------
+Symptom: Outer faces of firebricks flake off in large curved chips (Spalling).
+  -> Cause: Moisture trapped inside dense firebrick rapidly turned to steam during heating.
+  -> Solution: Extend low-temperature water-smoking phase on all subsequent firings.
+
+
+================================================================================
+SECTION 8: REPLACEMENT PARTS & MASONRY SUPPLIES DIRECTORY
+================================================================================
+
+8.1 CONSUMABLE REFRACTORY MATERIALS
+--------------------------------------------------------------------------------
+Item Code      Description                                  Qty Unit
+--------------------------------------------------------------------------------
+KM-K26-BRK     K-26 High-Alumina Firebrick (Standard Straight) 100 Box
+KM-MORT-50     High-Temp Heat-Set Mortar Mix (25kg Bag)     1   Bag
+KM-SIC-SHLF    Silicon Carbide Kiln Shelf (450mm x 600mm)   1   Piece
+KM-POST-SET    High-Alumina Interlocking Shelf Posts        1   Set (12)
+KM-SIC-DMPR    Silicon Carbide Flue Damper Plate            1   Piece
+KM-CONE-10     Pyrometric Orton Cones - Cone 10             1   Box (50)
+
+8.2 HARDWARE FASTENERS & CAST IRON FITTINGS
+--------------------------------------------------------------------------------
+Location                         Fitting Description    Material / Spec
+--------------------------------------------------------------------------------
+Firebox Air Doors                Cast Iron Hinge Plate  ASTM A48 Class 30
+Arch Outer Support Frame         Angle Iron 75x75x6mm   Structural Steel A36
+Tie-Rod Assemblies               M20 Threaded Rods      Grade 8.8 Galvanized
+Spyhole Cover Plugs              Tapered Fireclay Plugs Refractory Ceramic
+
+
+================================================================================
+SECTION 9: WARRANTY, TECHNICAL SUPPORT & ARTISAN ADVISORY CONTACTS
+================================================================================
+
+Stone & Fire Artisan Kilnworks Ltd. provides a five (5) year structural warranty on 
+the steel exterior bracing framework and a one (1) year limited warranty on refractory 
+masonry bricks against manufacturing defects. Thermal wear, ash erosion, and improper 
+curing damage are excluded.
+
+TECHNICAL SUPPORT & ARTISAN CONSULTATION:
+Global Guild Portal:           https://www.stoneandfire-kilns-example.com/support
+24/7 Kilnmaster Hotline:       +1 (800) 555-0188 / +44 1632 960122
+Master Potter Direct Email:    artisan-support@stoneandfire-kilns-example.com
+Masonry Orders & Spare Parts:  masonry@stoneandfire-kilns-example.com
+
+================================================================================
+                       END OF TECHNICAL MANUAL DOCUMENT
+================================================================================
