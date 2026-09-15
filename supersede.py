@@ -10,12 +10,14 @@ import time
 from collections import Counter
 from google.genai import types
 from llm import client, GEMINI_MODEL
+from prepare import family
 from store import documents, model
 
 CANDIDATES_PER_CHUNK = 3
 SIMILARITY_FLOOR = 0.35
 RETRIES = 4
 BACKOFF = 8
+RETRYABLE = ("RESOURCE_EXHAUSTED", "UNAVAILABLE", "INTERNAL", "DEADLINE_EXCEEDED")
 LOG_PATH = "supersession_log.jsonl"
 SUPERSEDING_VERDICTS = ("DUPLICATE", "CONTRADICTS")
 NOT_APPLIED = "--apply not given"
@@ -45,8 +47,17 @@ Rules:
 
 Quote the sentence from each passage that drove your decision. Keep the rationale to two sentences."""
 
+def relatives(source):
+    stored = documents.get(include = ["metadatas"])["metadatas"]
+    return sorted({record["source"] for record in stored
+                   if family(record["source"]) == family(source)})
+
 def nominate(chunks, source, ingested_at):
-    if not chunks or documents.count() == 0:
+    # only versions of the same document may supersede each other. Judged on text alone
+    # two manuals for different products read as flat contradictions, and the Aurora
+    # headset retired the Nexus temperature specification.
+    kin = relatives(source) if chunks else []
+    if not kin:
         return []
 
     ids = list(chunks)
@@ -54,7 +65,8 @@ def nominate(chunks, source, ingested_at):
 
     results = documents.query(query_embeddings = model.encode(texts).tolist(),
                               n_results = CANDIDATES_PER_CHUNK,
-                              where = {"status": "active"})
+                              where = {"$and": [{"status": "active"},
+                                                {"source": {"$in": kin}}]})
 
     when = time.time()
     pairs = []
@@ -106,8 +118,9 @@ def judge(earlier, later):
                                                      response_schema = VERDICT_SCHEMA))
             return json.loads(response.text)
         except Exception as error:
-            # the quota is per minute, so a burst of calls has to wait it out
-            if "RESOURCE_EXHAUSTED" not in str(error) or attempt == RETRIES - 1:
+            # the quota is per minute, so a burst of calls has to wait it out. A 503 is
+            # common enough that treating one as a verdict silently drops real candidates.
+            if attempt == RETRIES - 1 or not any(code in str(error) for code in RETRYABLE):
                 raise
             time.sleep(BACKOFF * 2 ** attempt)
 

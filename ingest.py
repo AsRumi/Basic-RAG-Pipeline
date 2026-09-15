@@ -8,12 +8,9 @@ import os
 import time
 from collections import Counter
 from datetime import datetime, timezone
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from prepare import split
 from store import documents, model
 from supersede import nominate, adjudicate, apply, log, LOG_PATH
-
-CHUNK_SIZE = 800
-CHUNK_OVERLAP = 150
 
 def content_hash(text):
     return hashlib.sha1(text.encode("utf-8")).hexdigest()
@@ -54,11 +51,8 @@ if __name__ == "__main__":
     with open(args.name, encoding = "utf-8") as f:
         doc_text = f.read()
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size = CHUNK_SIZE,
-                                              chunk_overlap = CHUNK_OVERLAP)
-
     chunks = {}
-    for chunk in splitter.split_text(doc_text):
+    for chunk in split(doc_text, source):
         chunks.setdefault(chunk_id(source, chunk), chunk)
 
     stored = set(documents.get(ids = list(chunks))["ids"])

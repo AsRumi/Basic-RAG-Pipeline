@@ -7,8 +7,12 @@ from store import documents, model
 
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
+# widening this does not buy recall. Measured at 20, 30 and 40 the answer kept the same
+# rank, and 30 pulled a decoy above one of them: what the re-ranker is given matters more.
+CANDIDATE_POOL = 10
+
 def retrieve_and_rerank(query, k):
-    retrieval_results = retrieve(query, 10)
+    retrieval_results = retrieve(query, CANDIDATE_POOL)
     chunks = retrieval_results["documents"][0] # each field is a list of lists, [0] gives you the flat list for our query
     ids = retrieval_results["ids"][0]
     metadatas = retrieval_results["metadatas"][0]

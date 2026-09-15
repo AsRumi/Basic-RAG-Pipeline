@@ -1,17 +1,23 @@
 from llm import client, GEMINI_MODEL
 from retriever import retrieve_and_rerank
 
+CONTEXT_CHUNKS = 6
+
+INSTRUCTIONS = """Answer the question at the end using only the passages below. Each passage is labelled with the document it came from and the section it sits in.
+
+A table of contents, a section list or a bare heading is not an answer. Ignore those passages and answer from the ones that carry the actual detail. Only say the passages do not answer the question when none of them do.
+
+You can use the passages to construct sentences to answer the question."""
+
 def build_prompt(query, results):
     context = ""
     for result in results:
-        context += result["text"] + "\n\n"
-    
-    instructions = "Answer the question at the end using only the given information below. Do not answer the question if the given information does not provide an answer. You can use the given information to construct sentences to answer the question."
-    
-    return instructions + "\n\n" + context + "\n\n" + query
+        context += f"--- from {result['metadata']['source']} ---\n{result['text']}\n\n"
+
+    return f"{INSTRUCTIONS}\n\n{context}\nQUESTION: {query}"
 
 def ask(query):
-    results = retrieve_and_rerank(query, 3)
+    results = retrieve_and_rerank(query, CONTEXT_CHUNKS)
     prompt = build_prompt(query, results)
     response = client.models.generate_content(model = GEMINI_MODEL, contents = prompt)
     return response.text, results

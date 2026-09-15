@@ -1,0 +1,422 @@
+================================================================================
+            NEXUS-9000 HEAVY-DUTY INDUSTRIAL ROTARY SCALING SYSTEM
+                        COMPREHENSIVE USER MANUAL & TECHNICAL GUIDE
+================================================================================
+Document Reference: UM-N9K-2026-REV4
+Publication Date: September 2026
+Equipment Model: Nexus-9000 Series (Base, Pro, & Enterprise Models)
+Manufacturer: Nexus Industrial Automation Technologies Ltd.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+ 1. SYSTEM SPECIFICATIONS & TECHNICAL DATA
+    1.1 Physical Dimensions & Structural Weight
+    1.2 Electrical Requirements & Power Consumption
+    1.3 Environmental Operating Parameters
+    1.4 Processing Throughput & Mechanical Tolerances
+ 2. SAFETY WARNINGS, HAZARD CLASSIFICATIONS & REGULATORY COMPLIANCE
+    2.1 Safety Alert Symbols & Conventions
+    2.2 High-Voltage Electrical Safety Guidelines
+    2.3 High-Torque Mechanical Hazard Protocols
+    2.4 Emergency Stop (E-Stop) Procedures & Lockout/Tagout (LOTO)
+ 3. UNPACKING, INSPECTION & INSTALLATION PROCEDURES
+    3.1 Uncrating & Initial Inspection Checklist
+    3.2 Site Preparation & Floor Load Requirements
+    3.3 Pneumatic & Hydraulic Line Connections
+    3.4 Electrical Wiring & Grounding Infrastructure
+ 4. COMPONENT OVERVIEW & SYSTEM ARCHITECTURE
+    4.1 Main Processing Chamber & Rotor Assembly
+    4.2 Feed Hopper & Automated Conveyor Intake
+    4.3 Pneumatic Actuators & Solenoid Control Valves
+    4.4 Integrated Sensor Network & Feedback Loops
+ 5. DIGITAL CONTROL INTERFACE & PROGRAMMING GUIDE
+    5.1 Touchscreen HMI Panel Layout
+    5.2 Initial Calibration Sequence
+    5.3 Parameter Configuration & Custom Presets
+    5.4 Automated Batch Processing Workflows
+ 6. PREVENTIVE MAINTENANCE SCHEDULE & ROUTINE SERVICING
+    6.1 Daily Pre-Operational Inspection
+    6.2 Weekly Lubrication & Mechanical Tension Adjustments
+    6.3 Monthly Sensor Calibration & Firmware Diagnostics
+    6.4 Quarterly Deep Cleaning & Wear-and-Tear Audits
+ 7. TROUBLESHOOTING GUIDE & ERROR CODES
+    7.1 System Diagnostics Logic Chart
+    7.2 Critical Hardware Error Codes (E-100 to E-499)
+    7.3 Soft Warning Codes & Operational Threshold Alerts
+    7.4 Mechanical Jam Recovery Procedures
+ 8. REPLACEMENT PARTS DIRECTORY & COMPONENT DIAGRAMS
+    8.1 Primary Wear Items & Recommended Spares
+    8.2 Fastener Specifications & Torque Values
+    8.3 Schematic Indexes
+ 9. WARRANTY, SUPPORT & TECHNICAL SERVICE CONTACTS
+
+
+================================================================================
+SECTION 1: SYSTEM SPECIFICATIONS & TECHNICAL DATA
+================================================================================
+
+1.1 PHYSICAL DIMENSIONS & STRUCTURAL WEIGHT
+--------------------------------------------------------------------------------
+Overall Footprint (L x W x H):    3450 mm x 1850 mm x 2200 mm
+Base Frame Material:             Reinforced 304 Stainless Steel / Anodized Al
+Rotor Chamber Volume:            450 Liters
+Net Weight (Empty):              2,450 kg (5,401 lbs)
+Operational Weight (Max Load):   3,850 kg (8,487 lbs)
+Intake Hopper Clearance:         1,400 mm from base level
+Discharge Chute Height:          850 mm from base level
+
+1.2 ELECTRICAL REQUIREMENTS & POWER CONSUMPTION
+--------------------------------------------------------------------------------
+Primary Power Input:             380V - 480V AC, 3-Phase, 50/60 Hz
+Auxiliary Line Power:            24V DC Internal Control Circuitry
+Full Load Amperage (FLA):        64 Amps @ 480V AC
+Peak Surge Current:              120 Amps (during rotor spool-up phase)
+Nominal Power Rating:            45 kW (60 HP)
+Power Factor Correction:         > 0.95 at full mechanical load
+Main Circuit Breaker Rating:     100 Amps, Industrial Grade Type C Curve
+
+1.3 ENVIRONMENTAL OPERATING PARAMETERS
+--------------------------------------------------------------------------------
+Operating Temperature Range:     -10°C to +50°C (14°F to 122°F)
+Storage Temperature Range:       -25°C to +65°C (-13°F to 149°F)
+Relative Humidity (Non-Cond):    5% to 92%
+Maximum Operating Altitude:      2,000 meters above sea level without derating
+Ingress Protection Rating:       IP66 for Control Enclosure / IP67 for Rotor Motor
+Acoustic Noise Level:            < 72 dBA at 1 meter during full operation
+
+1.4 PROCESSING THROUGHPUT & MECHANICAL TOLERANCES
+--------------------------------------------------------------------------------
+Maximum Feed Rate:               1,200 kg per hour (density dependent)
+Rotor Rotational Speed:          Adjustable from 50 RPM to 3,600 RPM
+Rotor Balance Rating:            ISO 1940-1 Grade G2.5
+Internal Scaling Precision:      ± 0.05% of total batch weight
+Pneumatic Operating Pressure:     0.6 MPa to 0.8 MPa (6 to 8 bar / 87 to 116 PSI)
+
+
+================================================================================
+SECTION 2: SAFETY WARNINGS, HAZARD CLASSIFICATIONS & REGULATORY COMPLIANCE
+================================================================================
+
+2.1 SAFETY ALERT SYMBOLS & CONVENTIONS
+--------------------------------------------------------------------------------
+[DANGER]:  Indicates an imminently hazardous situation which, if not avoided, 
+           WILL result in severe injury or death.
+[WARNING]: Indicates a potentially hazardous situation which, if not avoided, 
+           COULD result in severe injury or equipment failure.
+[CAUTION]: Indicates a risky condition which may result in minor personal 
+           injury or structural damage to internal machinery.
+[NOTICE]:  Contains information considered important for optimal processing 
+           efficiency but not directly hazard-related.
+
+2.2 HIGH-VOLTAGE ELECTRICAL SAFETY GUIDELINES
+--------------------------------------------------------------------------------
+[DANGER] HIGH VOLTAGE RISK
+The Nexus-9000 system utilizes 480V 3-phase alternating current capable of 
+delivering lethal electrical shocks. 
+
+1. Only certified, licensed industrial electricians may perform wiring, testing, 
+   or internal maintenance inside the high-voltage electrical cabinet.
+2. Ensure the main disconnect switch located on the left exterior housing panel 
+   is locked in the OFF position before opening the cabinet doors.
+3. Allow a minimum of 10 minutes following full power-down for internal variable 
+   frequency drive (VFD) capacitors to completely discharge stored energy.
+4. Test for zero electrical energy using a verified digital multimeter prior to 
+   touching any wire connections or bus bars.
+
+2.3 HIGH-TORQUE MECHANICAL HAZARD PROTOCOLS
+--------------------------------------------------------------------------------
+[WARNING] ROTATING PARTS & PINCH POINTS
+The central scaling rotor rotates at speeds up to 3,600 RPM with extreme torque capability.
+
+1. NEVER defeat, bypass, or tamper with the safety interlock switches on the 
+   access hatches or intake feed system.
+2. Operators MUST wear tight-fitting industrial clothing. Loose sleeves, long hair, 
+   necklaces, and gloves are strictly forbidden near the intake conveyor.
+3. Keep hands, arms, and tools clear of the internal scaling chamber whenever 
+   the system status indicator is illuminated RED or YELLOW.
+4. Ensure safety guards over all drive belts and coupling housings remain 
+   installed and fully tightened during machine operation.
+
+2.4 EMERGENCY STOP (E-STOP) PROCEDURES & LOCKOUT/TAGOUT (LOTO)
+--------------------------------------------------------------------------------
+The Nexus-9000 features three red palm-actuated Emergency Stop buttons:
+  - E-STOP 1: Located on the main HMI touchscreen front panel.
+  - E-STOP 2: Located near the intake feed hopper assembly.
+  - E-STOP 3: Located adjacent to the primary discharge chute.
+
+Pressing ANY E-Stop button instantly cuts power to the main drive motor, applies 
+the dual pneumatic emergency brake, and halts all active automation tasks within 
+250 milliseconds.
+
+LOCKOUT/TAGOUT (LOTO) PROCEDURE:
+Step 1: Notify all nearby operational staff that LOTO is being performed.
+Step 2: Initiate a controlled system shutdown from the primary HMI display menu.
+Step 3: Rotate the main red handle disconnect valve counter-clockwise to OFF.
+Step 4: Place a padlocked lockout clasp over the primary handle bar cutout.
+Step 5: Bleed pneumatic pressure by pulling the manual safety relief valve ring.
+Step 6: Affix a standardized physical warning tag containing technician name, date, 
+        and contact details.
+
+
+================================================================================
+SECTION 3: UNPACKING, INSPECTION & INSTALLATION PROCEDURES
+================================================================================
+
+3.1 UNCRATING & INITIAL INSPECTION CHECKLIST
+--------------------------------------------------------------------------------
+Upon receiving the Nexus-9000 unit:
+1. Inspect the exterior wooden crate structure for signs of mishandling or water.
+2. Check the Tip-N-Tell and ShockWatch indicator badges on the outer frame. If 
+   the indicators show red activation, notify the logistics carrier immediately.
+3. Carefully remove top paneling followed by side panels using impact drivers.
+4. Cut security strapping and remove protective heavy-duty vapor barrier plastic.
+5. Verify that all accessory boxes (Control Pendant, Tool Kit, Cable Hose Array) 
+   match the Packing Slip Index.
+
+3.2 SITE PREPARATION & FLOOR LOAD REQUIREMENTS
+--------------------------------------------------------------------------------
+- Floor Spec: C30/37 structural reinforced concrete slab, minimum 200mm thickness.
+- Levelness: Flatness tolerance within ± 2 mm over a 3-meter span.
+- Anchor Bolts: Utilize 8x M16 x 150mm heavy-duty expansion mechanical anchors.
+- clearance: Provide a minimum 1.2-meter working perimeter around all 4 sides of 
+  the unit for ventilation and maintenance doors.
+
+3.3 PNEUMATIC & HYDRAULIC LINE CONNECTIONS
+--------------------------------------------------------------------------------
+1. Connect a 1/2-inch NPT dry, oil-free compressed air supply line to the main 
+   Filter-Regulator-Lubricator (FRL) assembly.
+2. Adjust pressure regulator knob to achieve a constant 0.7 MPa operating pressure.
+3. Verify condensate auto-drain mechanism functions by pressing test valve pin.
+
+3.4 ELECTRICAL WIRING & GROUNDING INFRASTRUCTURE
+--------------------------------------------------------------------------------
+1. Route 3-phase power through industrial conduit into the top entry gland plate.
+2. Connect L1, L2, L3 wires to main terminal blocks L1-IN, L2-IN, and L3-IN.
+3. Connect Earth Ground line to the central copper grounding bolt with a cable 
+   having cross-sectional area >= 16 mm². Ground impedance must read < 1.0 Ohm.
+
+
+================================================================================
+SECTION 4: COMPONENT OVERVIEW & SYSTEM ARCHITECTURE
+================================================================================
+
+4.1 MAIN PROCESSING CHAMBER & ROTOR ASSEMBLY
+--------------------------------------------------------------------------------
+The core of the Nexus-9000 consists of a precision-milled cylindrical chamber 
+containing a balanced 8-vane titanium-nitride coated scaling rotor. Material 
+entering the top port is metered, measured, and accelerated through the chamber 
+wall where multi-point piezoelectric pressure sensors measure mass flow with high accuracy.
+
+4.2 FEED HOPPER & AUTOMATED CONVEYOR INTAKE
+--------------------------------------------------------------------------------
+The feed system utilizes a variable-frequency vibratory feed pan combined with 
+an overhead metering gate. Dual optical laser sensors mounted across the hopper 
+mouth monitor material height to prevent bridging and over-fill situations.
+
+4.3 PNEUMATIC ACTUATORS & SOLENOID CONTROL VALVES
+--------------------------------------------------------------------------------
+High-cycle pneumatic cylinders actuate the upper intake gate, lower discharge valve, 
+and automated sampling ports. All pneumatic functions are driven by an integrated 
+24V DC solenoid valve manifold operating via direct CANopen fieldbus communications.
+
+4.4 INTEGRATED SENSOR NETWORK & FEEDBACK LOOPS
+--------------------------------------------------------------------------------
+- Load Cells: 4x Strain-gauge load cells (IP68) arranged in a full bridge circuit.
+- Temperature Sensors: 2x PT100 RTD probes measuring rotor bearing temperature.
+- Vibration Monitoring: Tri-axial MEMS accelerometer evaluating rotor imbalance.
+- Speed Encoder: 1024-PPR optical rotary encoder attached to motor shaft.
+
+
+================================================================================
+SECTION 5: DIGITAL CONTROL INTERFACE & PROGRAMMING GUIDE
+================================================================================
+
+5.1 TOUCHSCREEN HMI PANEL LAYOUT
+--------------------------------------------------------------------------------
+The Nexus-9000 features a 12.1-inch IP65 industrial touchscreen running NexusOS v4.2.
+
+Main Screen Zones:
++------------------------------------------------------------------------------+
+| [SYSTEM STATUS: READY]       [MODE: AUTO]           [USER: OPERATOR_1]       |
++------------------------------------------------------------------------------+
+|                                                                              |
+|  [ ROTOR RPM ]         [ CURRENT TARE ]        [ THROUGHPUT RATE ]           |
+|     1800 RPM               0.000 kg                 850 kg/hr                |
+|                                                                              |
+|  [ CHAMBER TEMP ]      [ SYSTEM PRESS ]        [ BATCH WEIGHT ]              |
+|      38.4 °C               0.71 MPa                124.5 kg                  |
+|                                                                              |
++------------------------------------------------------------------------------+
+| [ START ]   [ STOP ]   [ TARE ]   [ PRESETS ]   [ ALARMS ]   [ SETTINGS ]    |
++------------------------------------------------------------------------------+
+
+5.2 INITIAL CALIBRATION SEQUENCE
+--------------------------------------------------------------------------------
+1. Clean all residual material out of the main scaling chamber and discharge chute.
+2. From the HMI Main Menu, tap [ SETTINGS ] -> [ CALIBRATION ] -> [ ZERO TARE ].
+3. Allow the system to collect 500 sensor samples over a 10-second window.
+4. Place a certified 50.00 kg calibration test weight onto the internal load platform.
+5. Key in "50.00" on the touchscreen keypad and tap [ EXECUTE SPAN CALIBRATION ].
+6. Verify calibration error margin reads < 0.02%. Tap [ SAVE CALIBRATION PROFILE ].
+
+5.3 PARAMETER CONFIGURATION & CUSTOM PRESETS
+--------------------------------------------------------------------------------
+Operators can store up to 64 distinct material profiles.
+
+Configurable Preset Parameters:
+  - Preset Name: (String, max 24 chars)
+  - Target Rotor RPM: (Range: 50 - 3600)
+  - Intake Feed Rate: (10% to 100%)
+  - Target Batch Mass: (Range: 1.0 kg - 999.0 kg)
+  - Settling Time Window: (0.5 sec - 10.0 sec)
+  - High-Accuracy Fine Dosing Threshold: (80% - 98%)
+
+5.4 AUTOMATED BATCH PROCESSING WORKFLOWS
+--------------------------------------------------------------------------------
+When running in AUTO mode:
+1. System executes pre-start safety loop check (Guard doors, E-Stops, Air Pressure).
+2. Discharge gate closes and verifies full seal.
+3. Rotor accelerates to programmed Target RPM.
+4. Intake vibratory feeder activates at coarse feed rate.
+5. Upon reaching fine dosing threshold, vibratory feeder reduces speed.
+6. When target mass is reached within tolerance, intake gate snaps shut.
+7. System waits for vibration settling time window to expire.
+8. Mass data is logged to internal memory and network database.
+9. Discharge gate opens, emptying material to downstream process.
+
+
+================================================================================
+SECTION 6: PREVENTIVE MAINTENANCE SCHEDULE & ROUTINE SERVICING
+================================================================================
+
+6.1 DAILY PRE-OPERATIONAL INSPECTION
+--------------------------------------------------------------------------------
+[ ] Inspect power cord and control cable conduits for cuts, abrasions, or damage.
+[ ] Check compressed air pressure gauge on FRL unit (must read 0.6 - 0.8 MPa).
+[ ] Inspect feed hopper and scaling chamber for foreign debris or buildup.
+[ ] Test operation of all E-Stop buttons and safety door switch interlocks.
+
+6.2 WEEKLY LUBRICATION & MECHANICAL TENSION ADJUSTMENTS
+--------------------------------------------------------------------------------
+[ ] Apply Synthetic Lithium Grease (NLGI Grade 2) to main shaft bearing grease zerts.
+[ ] Check drive belt tension using ultrasonic tension meter (target: 65 Hz ± 5 Hz).
+[ ] Drain accumulated moisture bowl on pneumatic filter assembly.
+[ ] Wipe clean optical laser sensor lenses using isopropyl alcohol wipes.
+
+6.3 MONTHLY SENSOR CALIBRATION & FIRMWARE DIAGNOSTICS
+--------------------------------------------------------------------------------
+[ ] Perform full multi-point scale calibration using certified weights.
+[ ] Inspect pneumatic hose lines for micro-fissures or air leakage sounds.
+[ ] Measure motor winding insulation resistance with 500V Megohmmeter (> 5 Megohms).
+[ ] Backup system configuration presets and error logs to USB storage drive.
+
+6.4 QUARTERLY DEEP CLEANING & WEAR-AND-TEAR AUDITS
+--------------------------------------------------------------------------------
+[ ] Remove rotor chamber end-plate; inspect titanium-nitride vanes for wear or pitting.
+[ ] Replace rotor chamber silicone lip seals (Part # NX-7022-S).
+[ ] Inspect rubber anti-vibration isolation mounts for cracking or degradation.
+[ ] Update NexusOS firmware to latest vendor release version.
+
+
+================================================================================
+SECTION 7: TROUBLESHOOTING GUIDE & ERROR CODES
+================================================================================
+
+7.1 SYSTEM DIAGNOSTICS LOGIC CHART
+--------------------------------------------------------------------------------
+Condition: Machine will not turn on.
+  -> Check main breaker on electrical wall unit.
+  -> Verify 24V DC internal power supply indicator light is ON.
+  -> Inspect control transformer primary fuse F1 (5A, Slow-Blow).
+
+Condition: Rotor fails to achieve target speed.
+  -> Inspect VFD display panel inside main electrical box for error codes.
+  -> Verify drive belt tension is set correctly.
+  -> Check chamber for mechanical obstruction or material jam.
+
+7.2 CRITICAL HARDWARE ERROR CODES (E-100 TO E-499)
+--------------------------------------------------------------------------------
+E-101 [EMERGENCY STOP ACTIVATED]
+  Cause: One or more E-Stop switches have been depressed.
+  Action: Release E-Stop button; tap [ RESET ALARM ] on HMI.
+
+E-104 [DOOR INTERLOCK TRIPPED]
+  Cause: Rotor access hatch or hopper service door opened while system active.
+  Action: Close and latch all safety doors; verify door switch LED is GREEN.
+
+E-210 [LOAD CELL OVERRANGE DETECTED]
+  Cause: Weight applied to scaling chamber exceeds maximum 500 kg limit.
+  Action: Immediately clear excessive weight from intake hopper.
+
+E-302 [MOTOR OVER-TEMPERATURE TRIP]
+  Cause: Main motor temperature exceeded 105°C for longer than 10 seconds.
+  Action: Allow motor to cool down; inspect cooling fan shroud for blockages.
+
+E-412 [PNEUMATIC PRESSURE LOW]
+  Cause: Supply pressure dropped below 0.5 MPa threshold.
+  Action: Check external air compressor line and primary intake valve.
+
+7.3 SOFT WARNING CODES & OPERATIONAL THRESHOLD ALERTS
+--------------------------------------------------------------------------------
+W-501 [TARE VARIANCE WARNING]
+  Cause: Zero offset drifted by > 0.5% since last calibration.
+  Action: Perform chamber cleaning and execute ZERO TARE sequence.
+
+W-604 [ROTOR IMBALANCE DETECTED]
+  Cause: Vibration accelerometer reading exceeds 4.5 mm/s RMS threshold.
+  Action: Inspect rotor vanes for uneven material buildup or missing hardware.
+
+7.4 MECHANICAL JAM RECOVERY PROCEDURES
+--------------------------------------------------------------------------------
+1. Engage Lockout/Tagout (LOTO) protocol as specified in Section 2.4.
+2. Open rotor chamber front access cover using the specialized hex key tool.
+3. Using protective cut-resistant gloves, carefully extract jammed foreign object.
+4. Clean interior wall surfaces with non-scratch scraper.
+5. Close access door, ensure gasket is seated properly, and tighten latch bolts.
+6. Remove LOTO locks, restore power, and run system at 100 RPM test speed.
+
+
+================================================================================
+SECTION 8: REPLACEMENT PARTS DIRECTORY & COMPONENT DIAGRAMS
+================================================================================
+
+8.1 PRIMARY WEAR ITEMS & RECOMMENDED SPARES
+--------------------------------------------------------------------------------
+Item Code      Description                                  Qty   Rec. Stock
+--------------------------------------------------------------------------------
+NX-7022-S      Silicone Chamber Edge Seal v4                 2      4
+NX-3011-B      High-Speed Rotor Bearing (SKF 6210-2RS)       2      2
+NX-9050-V      Titanium-Nitride Coated Vane Blade Kit        8      1 Set
+NX-1044-F      Pneumatic FRL Filter Element 5 Micron         1      2
+NX-8002-L      Strain-Gauge Load Cell Module 150kg IP68      4      1
+NX-4410-P      Solenoid Valve Coil 24V DC                    2      2
+NX-2020-B      Optibelt V-Belt Metric Alpha-X                1      2
+
+8.2 FASTENER SPECIFICATIONS & TORQUE VALUES
+--------------------------------------------------------------------------------
+Location                         Bolt Size / Type       Torque Spec
+--------------------------------------------------------------------------------
+Main Shaft Bearing Flange        M12 x 40mm Grade 10.9  88 Nm (65 ft-lbs)
+Rotor Vane Mounting Screws       M8 x 20mm Stainless A4 25 Nm (18.5 ft-lbs)
+Base Frame Mounting Anchors      M16 x 150mm Expansion  130 Nm (96 ft-lbs)
+Electrical Panel Gland Plate     M5 x 12mm Pan Head     3.5 Nm (2.6 ft-lbs)
+
+
+================================================================================
+SECTION 9: WARRANTY, SUPPORT & TECHNICAL SERVICE CONTACTS
+================================================================================
+
+Nexus Industrial Automation Technologies Ltd. warrants the Nexus-9000 system 
+against defects in materials and workmanship for a period of three (3) years or 
+8,000 operational hours, whichever occurs first, from the original date of installation.
+
+TECHNICAL SUPPORT DIRECTORY:
+Global Customer Service Portal:  https://www.nexus-automation-tech.com/support
+24/7 Hot-Line Telephone:         +1 (800) 555-0144 / +44 20 7946 0912
+Direct Engineering Assistance:   tech-support@nexus-automation-tech.com
+Spare Parts Procurement:         parts@nexus-automation-tech.com
+
+================================================================================
+                       END OF TECHNICAL MANUAL DOCUMENT
+================================================================================
